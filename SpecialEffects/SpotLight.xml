@@ -1,0 +1,77 @@
+<Block>
+	<Debug>false</Debug>
+	<ID>1</ID>
+	<Name>Spot Light</Name>
+	<Mass>0.5</Mass>
+	<SearchKeywords>
+		<Keyword>spot light</Keyword>
+	</SearchKeywords>
+	<CanFlip>false</CanFlip>
+	
+	<Modules>
+		<SpotLight modid="876e14a5-e25d-43a9-915f-1eb61b036822">
+		</SpotLight>
+	</Modules>
+
+	<Mesh name="SpotLight_mesh" >
+		<Position x="0.0" y="0.0" z="0.5" />
+		<Rotation x="0.0" y="0.0" z="0.0" />
+		<Scale x="0.4" y="0.4" z="0.4" />
+	</Mesh>
+
+	<Texture name="SpotLight_texture" />
+
+	<Icon>
+		<Position x="0.03" y="0.0" z="-1.0" /> <!--right, up, front-->
+		<Rotation x="20.0" y="145.0" z="-10.0" /> <!--left, down, front-->
+		<Scale x="0.23" y="0.23" z="0.23" />
+	</Icon>
+	
+	<FireInteraction burnDuration="3" igniteOnStart="false">
+		<SphereTrigger>
+		<Position x="0" y="0" z="0.3" />
+		<Radius>0.75</Radius>
+		</SphereTrigger>
+	</FireInteraction>
+
+	<Colliders>
+		<BoxCollider>
+			<Position x="0.0" y="0.0" z="0.5" />
+			<Rotation x="0.0" y="0.0" z="0.0" />
+			<Scale x="0.8" y="0.8" z="0.8" />
+		</BoxCollider>
+	</Colliders>
+
+	<BasePoint hasAddingPoint="true">
+		<Stickiness enabled="true" radius="1" />
+		<Motion x="false" y="false" z="false" /> 
+	</BasePoint>
+	
+	<AddingPoints>
+		<AddingPoint> <!--Top-->
+			<Position x="0.0" y="0.0" z="1.0" />
+			<Rotation x="0.0" y="0.0" z="0.0" />
+			<Stickiness enabled="false" radius="0"/>
+		</AddingPoint>
+		<AddingPoint> <!--Back-->
+			<Position x="0.0" y="-0.5" z="0.5" />
+			<Rotation x="90.0" y="0.0" z="0.0" />
+			<Stickiness enabled="false" radius="0"/>
+		</AddingPoint>
+		<AddingPoint> <!--Front-->
+			<Position x="0.0" y="0.5" z="0.5" />
+			<Rotation x="-90.0" y="0.0" z="0.0" />
+			<Stickiness enabled="false" radius="0"/>
+		</AddingPoint>
+		<AddingPoint> <!--Left-->
+			<Position x="0.5" y="0.0" z="0.5" />
+			<Rotation x="0.0" y="90.0" z="0.0" />
+			<Stickiness enabled="false" radius="0"/>
+		</AddingPoint>
+		<AddingPoint> <!--Right-->
+			<Position x="-0.5" y="0.0" z="0.5" />
+			<Rotation x="0.0" y="-90.0" z="0.0" />
+			<Stickiness enabled="false" radius="0"/>
+		</AddingPoint>
+	</AddingPoints>
+</Block>

@@ -1,0 +1,70 @@
+<Block>
+	<Debug>false</Debug>
+	<ID>4</ID>
+	<Name>Text Block</Name>
+	<Mass>0.1</Mass>
+	<SearchKeywords>
+		<Keyword>text block</Keyword>
+	</SearchKeywords>
+	<CanFlip>false</CanFlip>
+	
+	<Modules>
+		<TextBlock modid="876e14a5-e25d-43a9-915f-1eb61b036822">
+		</TextBlock>
+	</Modules>
+
+	<Mesh name="TextBlock_mesh" >
+		<Position x="0.0" y="0.0" z="0.5" />
+		<Rotation x="0.0" y="0.0" z="0.0" />
+		<Scale x="0.5" y="0.5" z="0.5" />
+	</Mesh>
+
+	<Texture name="TextBlock_texture" />
+
+	<Icon>
+		<Position x="0.0" y="0.0" z="-1.0" /> <!--right, up, front-->
+		<Rotation x="-20.0" y="45.0" z="0.0" /> <!--left, down, front-->
+		<Scale x="0.25" y="0.25" z="0.25" />
+	</Icon>
+
+	<Colliders>
+		<BoxCollider>
+			<Position x="0.0" y="0.0" z="0.5" />
+			<Rotation x="0.0" y="0.0" z="0.0" />
+			<Scale x="0.8" y="0.8" z="0.8" />
+		</BoxCollider>
+	</Colliders>
+
+	<BasePoint hasAddingPoint="true">
+		<Stickiness enabled="true" radius="1" />
+		<Motion x="false" y="false" z="false" /> 
+	</BasePoint>
+	
+	<AddingPoints>
+		<AddingPoint> <!--Top-->
+			<Position x="0.0" y="0.0" z="1.0" />
+			<Rotation x="0.0" y="0.0" z="0.0" />
+			<Stickiness enabled="true" radius="1"/>
+		</AddingPoint>
+		<AddingPoint> <!--Back-->
+			<Position x="0.0" y="-0.5" z="0.5" />
+			<Rotation x="90.0" y="0.0" z="0.0" />
+			<Stickiness enabled="true" radius="1"/>
+		</AddingPoint>
+		<AddingPoint> <!--Front-->
+			<Position x="0.0" y="0.5" z="0.5" />
+			<Rotation x="-90.0" y="0.0" z="0.0" />
+			<Stickiness enabled="true" radius="1"/>
+		</AddingPoint>
+		<AddingPoint> <!--Left-->
+			<Position x="0.5" y="0.0" z="0.5" />
+			<Rotation x="0.0" y="90.0" z="0.0" />
+			<Stickiness enabled="true" radius="1"/>
+		</AddingPoint>
+		<AddingPoint> <!--Right-->
+			<Position x="-0.5" y="0.0" z="0.5" />
+			<Rotation x="0.0" y="-90.0" z="0.0" />
+			<Stickiness enabled="true" radius="1"/>
+		</AddingPoint>
+	</AddingPoints>
+</Block>

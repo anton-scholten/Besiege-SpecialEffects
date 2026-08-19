@@ -1,0 +1,78 @@
+<Block>
+	<Debug>false</Debug>
+	<ID>2</ID>
+	<Name>Particle Emitter</Name>
+	<Mass>1</Mass>
+	<SearchKeywords>
+		<Keyword>particle emitter</Keyword>
+	</SearchKeywords>
+	<CanFlip>false</CanFlip>
+	
+	<Modules>
+		<ParticleEmitter modid="876e14a5-e25d-43a9-915f-1eb61b036822">
+			<Particles>
+				<Texture name="Bar" />
+				<Texture name="Plus" />
+				<Texture name="Lighting Bolt" />
+				<Texture name="Point" />
+				<Texture name="Triangle" />
+				<Texture name="Pentagon" />
+				<Texture name="Potion" />
+				<Texture name="sheep" />
+				<Texture name="snowflake" />
+				<Texture name="Like" />
+				<Texture name="Heart" />
+				<Texture name="Hex" />
+				<Texture name="100" />
+		
+				<Texture name="Rainbow Point" />
+				<Texture name="Void 1" />
+				<Texture name="Void 2" />
+				<Texture name="Light1" />
+				<Texture name="Light2" />
+				<Texture name="Smoke1" />
+				<Texture name="Smoke2" />
+				<Texture name="Smoke3" />
+				<Texture name="Smoke4" />
+				<Texture name="Fire" />
+				<Texture name="Bubble" />
+				<Texture name="Chickin" />
+				<Texture name="Hammer" />
+		
+				<Texture name="Thonk1" />
+				<Texture name="SadThonk" />
+				<Texture name="Thonk2" />
+				<Texture name="Lol" />
+				<Texture name="hmm" />
+				<Texture name="Thomas" />
+			</Particles>
+		</ParticleEmitter>
+	</Modules>
+	
+	<Mesh name="ParticleEmitter_mesh" >
+		<Position x="0.0" y="-0.5" z="0.75" />
+		<Rotation x="0.0" y="180.0" z="0.0" />
+		<Scale x="1.0" y="1.0" z="1.0" />
+	</Mesh>
+
+	<Texture name="ParticleEmitter_texture" />
+
+	<Icon>
+		<Position x="-0.05" y="-0.15" z="-1.5" /> <!--right, up, front-->
+		<Rotation x="-30.0" y="-30.0" z="0.0" /> <!--left, down, front-->
+		<Scale x="0.4" y="0.4" z="0.4" />
+	</Icon>
+
+	<Colliders>
+		<BoxCollider>
+			<Position x="0.0" y="0.0" z="1.0" />
+			<Rotation x="0.0" y="0.0" z="0.0" />
+			<Scale x="0.8" y="0.8" z="1.8" />
+		</BoxCollider>
+	</Colliders>
+
+	<BasePoint hasAddingPoint="false">
+		<Stickiness enabled="true" radius="1" />
+		<Motion x="false" y="false" z="false" /> 
+	</BasePoint>
+</Block>

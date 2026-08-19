@@ -1,0 +1,141 @@
+<Mod>	
+	<Name>SpecialEffects</Name>
+	<Author>wizz6rd</Author>
+	<Version>0.4.0</Version>
+	
+	<Description>
+	Adds: SpotLight, Glass, ParticleEmitter, and Text blocks. Spot light entity is not fully implemented, just testing things. Other blocks will come in the future to add special effects in game.
+	</Description>
+	
+	<Icon name="SpecialEffects_icon" />
+	<Debug>false</Debug>
+	<MultiplayerCompatible>true</MultiplayerCompatible>
+
+	<Assemblies>
+		<Assembly path="SpecialEffectsAssembly.dll" />
+	</Assemblies>
+
+	<Blocks>
+		<Block path="SpotLight.xml" />
+		<Block path="GlassBlock.xml" />
+		<Block path="ParticleEmitter.xml" />
+		<Block path="TextBlock.xml" />
+	</Blocks>
+
+	<Entities>
+		<Entity path="SpotLightEntity.xml" />
+	</Entities>
+	
+	<Events>
+		<Event>
+			<Name>SpotLight</Name>
+			<ID>1</ID>
+			<Icon name="SpecialEffects_icon" />
+			<Properties>
+				<Choice name="LightTypeInput" default="0">
+					<Option index="0">Spot</Option>
+					<Option index="1">Directional</Option>
+					<Option index="2">Point</Option>
+				</Choice>
+				<NumberInput name="BrightnessInput" title="Brightness" default="50" suffix="%" maxValue="100" minValue="0" />
+				<TextInput name="ColorInput" title="Color" default="#FF0000" />
+				<NumberInput name="AngleInput" title="Angle" suffix="°" default="65" negativeNumbers="false" maxValue="180" minValue="0" />
+				<NumberInput name="RangeInput" title="Range" suffix="m" default="30" negativeNumbers="false" maxValue="1000" minValue="0" />
+				<Choice name="IlluminationTypeInput" default="0">
+					<Option index="0">Pixel</Option>
+					<Option index="1">Vertex</Option>
+					<Option index="2">Auto</Option>
+				</Choice>
+				<Toggle name="HideVisuals" default="false">
+					<Icon name="SpecialEffects_icon" />
+				</Toggle>
+
+			</Properties>
+		</Event>
+	</Events>
+	
+<!--	
+	<Triggers>
+		<Trigger>
+			<Name>Trigger me honey</Name>
+			<ID>1</ID>
+			<AvailableOn>
+				<ModdedEntity>
+					<ModID>876e14a5-e25d-43a9-915f-1eb61b036822</ModID>
+					<LocalID>1</LocalID>
+				</ModdedEntity>
+				<AllOfficialEntities />
+			</AvailableOn>
+		</Trigger>
+	</Triggers>
+-->
+	
+	<Resources>
+		<Texture name="SpecialEffects_icon" path="SpecialEffects.png" />
+		
+		<!-- Asset Bundles -->
+		<AssetBundle name="FontsBundle" path="fontsbundle" />
+		
+		<!-- Blocks -->
+		<Mesh name="SpotLight_mesh" path="Blocks\SpotLight_mesh.obj" />
+		<Texture name="SpotLight_texture" path="Blocks\SpotLight_texture.png" />
+		
+		<Mesh name="ParticleEmitter_mesh" path="Blocks\Particle_Emitter.obj" />
+		<Texture name="ParticleEmitter_texture" path="Blocks\Particle_Emitter_tex.png" />
+		
+		<Mesh name="TextBlock_mesh" path="Blocks\TextBlock.obj" />
+		<Texture name="TextBlock_texture" path="Blocks\TextBlock.png" />
+		
+		<!-- Glass -->
+		<Texture name="Glass_texture" path="Blocks\Glass_texture.png" />
+		<Mesh name="Glass_mesh" path="Blocks\GlassPane.obj" />
+		<Mesh name="GlassBall_mesh" path="Blocks\GlassSphere_mesh.obj" />
+		<Mesh name="GlassICO_mesh" path="Blocks\GlassICOSphere_mesh.obj" />
+		<Mesh name="GlassTorus_mesh" path="Blocks\GlassTorus_mesh.obj" />
+		
+		<!-- Particle Textures -->
+		<Texture name="Bar" path="Particles\Bar.png" />
+		<Texture name="Plus" path="Particles\Plus.png" />
+		<Texture name="Lighting Bolt" path="Particles\Bolt.png" />
+		<Texture name="Point" path="Particles\Point.png" />
+		<Texture name="Triangle" path="Particles\Triangle.png" />
+		<Texture name="Pentagon" path="Particles\Pentagon.png" />
+		<Texture name="Potion" path="Particles\Potion.png" />
+		<Texture name="sheep" path="Particles\Sheep.png" />
+		<Texture name="snowflake" path="Particles\snowflake.png" />
+		<Texture name="Like" path="Particles\Like.png" />
+		<Texture name="Heart" path="Particles\Heart.png" />
+		<Texture name="Hex" path="Particles\hex.png" />
+		<Texture name="100" path="Particles\100.png" />
+		
+		<Texture name="Rainbow Point" path="Particles\Rainbow_Point.png" />
+		<Texture name="Void 1" path="Particles\Void1.png" />
+		<Texture name="Void 2" path="Particles\Void2.png" />
+		<Texture name="Light1" path="Particles\light1.png" />
+		<Texture name="Light2" path="Particles\light2.png" />
+		<Texture name="Smoke1" path="Particles\Smoke1.png" />
+		<Texture name="Smoke2" path="Particles\Smoke2.png" />
+		<Texture name="Smoke3" path="Particles\Smoke3.png" />
+		<Texture name="Smoke4" path="Particles\Smoke4.png" />
+		<Texture name="Fire" path="Particles\fire.png" />
+		<Texture name="Bubble" path="Particles\bubble.png" />
+		<Texture name="Chickin" path="Particles\Chickin.png" />
+		<Texture name="Hammer" path="Particles\Hammer.png" />
+		
+		<Texture name="Thonk1" path="Particles\Thonk.png" />
+		<Texture name="SadThonk" path="Particles\SadThonk.png" />
+		<Texture name="Thonk2" path="Particles\Thonk_small.png" />
+		<Texture name="Lol" path="Particles\OpenEyed.png" />
+		<Texture name="hmm" path="Particles\hmm.png" />
+		<Texture name="Thomas" path="Particles\Thomas.png" />
+		
+		<!-- Unused -->
+		<Mesh name="Cone" path="Cone.obj" />
+		<Mesh name="Lens" path="Lens.obj" />
+		<Texture name="SquareCookie" path="SquareCookie.png" />
+		
+	</Resources>
+	
+<ID>876e14a5-e25d-43a9-915f-1eb61b036822</ID>
+
+</Mod>

@@ -1,0 +1,46 @@
+<Entity>
+	<Debug>false</Debug>
+	<ID>1</ID>
+	<Name>Spot Light Entity</Name>
+	<Fallback>Cottage</Fallback>
+	
+	<Mesh name="SpotLight_mesh" >
+		<Position x="0.0" y="0.0" z="0.0" />
+		<Rotation x="0.0" y="-90.0" z="0.0" />
+		<Scale x="0.4" y="0.4" z="0.4" />
+	</Mesh>
+
+	<Texture name="SpotLight_texture" />
+	
+	<Icon name="SpecialEffects_icon" />
+	
+	<Offset x="0.0" y="0.5" z="0.0" />
+	
+	<Category>Virtual</Category>	
+	
+	<Colliders>
+		<BoxCollider>
+			<Position x="0.0" y="0.0" z="0.0" />
+			<Rotation x="0.0" y="0.0" z="0.0" />
+			<Scale x="0.8" y="0.8" z="0.8" />
+		</BoxCollider>
+	</Colliders>
+
+	<!-- Whether to show the Physics toggle in the properties of the entity.
+		 Disable it, if your entity shouldn't/can't respond to any physics. -->
+	<!-- Optional, default is true -->
+	<!-- <ShowPhysicsToggle>true</ShowPhysicsToggle> -->
+
+	<Triggers>
+		<Trigger>LevelStart</Trigger>
+		<Trigger>Activate</Trigger>
+		<Trigger>Deactivate</Trigger>
+		<Trigger>Destroy</Trigger>
+		<Trigger>Ignite</Trigger>
+		<Trigger>Variable</Trigger>
+		<ModdedTrigger>
+			<ModID>876e14a5-e25d-43a9-915f-1eb61b036822</ModID>
+			<LocalID>1</LocalID>
+		</ModdedTrigger>
+	</Triggers>
+</Entity>
