@@ -33,10 +33,18 @@ namespace SpecialEffectsMod
         // What the block's joint is worth once simulating.
         private const float JointBreakForce = 17000f;
 
+        // How much wider than its particle a heat shimmer is drawn, and the
+        // spread of turn rates across shimmers, in radians per second.
+        private const float HeatwaveSize = 1.5f;
+        private const float HeatwaveSpin = 1.5f;
+
         private GameObject particleHandler;
         private ParticleSystem particleSys;
         private Renderer particleRenderer;
-        private Material heatwaveMat;
+
+        private GameObject heatwaveHandler;
+        private ParticleSystem heatwaveSys;
+        private ParticleSystemRenderer heatwaveRenderer;
 
         private ParticleSystem.EmissionModule moduleEmission;
         private ParticleSystem.ShapeModule moduleShape;
@@ -114,6 +122,7 @@ namespace SpecialEffectsMod
 
         public override void SafeAwake()
         {
+            Skins.Hide(BlockBehaviour);
             CreateParticleSystem();
 
             settingsMenu = AddMenu("SettingsMenuKey", 0, new List<string>
@@ -143,7 +152,7 @@ namespace SpecialEffectsMod
             dampenLimit = AddSliderUnclamped("Speed Limit", "DampenLimit", 0f, -10f, 10f);
 
             heatwave = AddToggle("Heatwave", "HeatwaveKey", false);
-            heatwaveScale = AddSliderUnclamped("Heatwave Scale", "HeatwaveScaleKey", 0.15f, 0.01f, 1f);
+            heatwaveScale = AddSliderUnclamped("Heatwave Strength", "HeatwaveScaleKey", 0.15f, 0.01f, 1f);
             colorStart = AddColourSlider("Start", "ColorStart", Color.cyan, false);
             opacityStart = AddSlider("Opacity Start", "ColorOpacityStart", 0.75f, 0f, 1f);
             colorChanges = AddToggle("Changes", "ColorToggleChange", false);
@@ -215,20 +224,10 @@ namespace SpecialEffectsMod
         // reload.
         private void CreateParticleSystem()
         {
-            foreach (Transform child in gameObject.GetComponentsInChildren<Transform>())
-            {
-                if (child.name == "ParticleHandler")
-                {
-                    particleHandler = child.gameObject;
-                    break;
-                }
-            }
-
+            particleHandler = FindChild(gameObject.transform, "ParticleHandler");
             if (particleHandler == null)
             {
-                particleHandler = new GameObject();
-                particleHandler.transform.name = "ParticleHandler";
-                particleHandler.transform.parent = gameObject.transform;
+                particleHandler = NewChild(gameObject.transform, "ParticleHandler");
                 particleHandler.transform.localPosition = Vector3.forward * 1.8f;
                 particleHandler.transform.localRotation =
                     Quaternion.Euler(-particleHandler.transform.rotation.eulerAngles);
@@ -243,7 +242,7 @@ namespace SpecialEffectsMod
             particleRenderer = particleHandler.GetComponent<Renderer>();
             if (particleRenderer == null) particleRenderer = particleHandler.AddComponent<Renderer>();
 
-            heatwaveMat = FindHeatwaveMaterial();
+            CreateHeatwaveSystem();
 
             moduleEmission = particleSys.emission;
             moduleShape = particleSys.shape;
@@ -257,25 +256,50 @@ namespace SpecialEffectsMod
             moduleCollision = particleSys.collision;
         }
 
-        // The heat shimmer is the game's own, lifted off the bomb's explosion
-        // effect. Nothing here owns that hierarchy, so every step is checked
-        // rather than assumed: a miss costs the Heatwave toggle, not the block.
-        private Material FindHeatwaveMaterial()
+        // The shimmer is a second particle system sitting exactly on the first, so
+        // it follows the emitter's nozzle for free -- and, because Play and Stop
+        // both recurse into child systems, it starts and stops with the emitter
+        // without being driven separately.
+        //
+        // It is a child object found by name rather than a clone of the emitter,
+        // so that re-running the simulation reuses this one instead of adding
+        // another shimmer on top of it every run.
+        private void CreateHeatwaveSystem()
         {
-            BlockPrefab bomb;
-            if (!PrefabMaster.BlockPrefabs.TryGetValue((int)BlockType.Bomb, out bomb)) return null;
+            heatwaveHandler = FindChild(particleHandler.transform, "HeatwaveHandler");
+            if (heatwaveHandler == null)
+            {
+                heatwaveHandler = NewChild(particleHandler.transform, "HeatwaveHandler");
+                heatwaveHandler.transform.localPosition = Vector3.zero;
+                heatwaveHandler.transform.localRotation = Quaternion.identity;
+                heatwaveHandler.transform.localScale = Vector3.one;
+            }
 
-            ExplodeOnCollideBlock explode = bomb.gameObject.GetComponent<ExplodeOnCollideBlock>();
-            if (explode == null || explode.explosionEffect == null) return null;
+            heatwaveSys = heatwaveHandler.GetComponent<ParticleSystem>();
+            if (heatwaveSys == null) heatwaveSys = heatwaveHandler.AddComponent<ParticleSystem>();
+            heatwaveSys.Stop();
+            heatwaveSys.playOnAwake = false;
 
-            Transform puff = explode.explosionEffect.Find("PyroclasticPuff");
-            if (puff == null) return null;
-            Transform ripple = puff.Find("Ripple");
-            if (ripple == null) return null;
+            heatwaveRenderer = heatwaveHandler.GetComponent<ParticleSystemRenderer>();
+            if (heatwaveRenderer == null)
+                heatwaveRenderer = heatwaveHandler.AddComponent<ParticleSystemRenderer>();
+            if (Heatwave.Available) heatwaveRenderer.material = Heatwave.CreateMaterial();
+            heatwaveHandler.SetActive(false);
+        }
 
-            MeshRenderer renderer = ripple.GetComponent<MeshRenderer>();
-            if (renderer == null) return null;
-            return Instantiate(renderer.material);
+        private static GameObject FindChild(Transform parent, string name)
+        {
+            foreach (Transform child in parent.GetComponentsInChildren<Transform>())
+                if (child.name == name) return child.gameObject;
+            return null;
+        }
+
+        private static GameObject NewChild(Transform parent, string name)
+        {
+            GameObject child = new GameObject();
+            child.transform.name = name;
+            child.transform.parent = parent;
+            return child;
         }
 
         // Only one page of the settings menu is shown at a time; everything else
@@ -521,7 +545,7 @@ namespace SpecialEffectsMod
             moduleCollision.type = ParticleSystemCollisionType.World;
             moduleCollision.enabled = collisionToggle.IsActive;
 
-            if (heatwave.IsActive && heatwaveMat != null) AddHeatwave();
+            ConfigureHeatwave();
 
             // The emitter is heavier than its mounting suggests; without this it
             // snaps off the moment the machine moves.
@@ -530,15 +554,51 @@ namespace SpecialEffectsMod
             joint.breakTorque = JointBreakForce;
         }
 
-        // The shimmer is a second copy of the whole system drawn with the bomb's
-        // distortion material, so it follows the particles exactly.
-        private void AddHeatwave()
+        // The shimmer mirrors how the emitter throws its particles -- same rate,
+        // shape, speed and lifetime -- but nothing about how they are coloured or
+        // sized over their life, because it is not drawing a texture at all. It
+        // reads those off the emitter rather than off the mapper so the two cannot
+        // drift apart.
+        private void ConfigureHeatwave()
         {
-            ParticleSystem shimmer = (ParticleSystem)Instantiate(particleSys, particleSys.transform);
-            ParticleSystemRenderer shimmerRenderer = shimmer.GetComponent<ParticleSystemRenderer>();
-            shimmerRenderer.material = heatwaveMat;
-            shimmerRenderer.material.SetTextureScale("_BumpMap",
-                heatwaveScale.Value * new Vector2(1f, 1f));
+            bool on = heatwave.IsActive && Heatwave.Available;
+            heatwaveHandler.SetActive(on);
+            if (!on) return;
+
+            heatwaveSys.maxParticles = particleSys.maxParticles;
+            heatwaveSys.startLifetime = particleSys.startLifetime;
+            heatwaveSys.startSpeed = particleSys.startSpeed;
+            heatwaveSys.gravityModifier = particleSys.gravityModifier;
+            heatwaveSys.playbackSpeed = particleSys.playbackSpeed;
+            heatwaveSys.loop = particleSys.loop;
+            heatwaveSys.simulationSpace = particleSys.simulationSpace;
+            heatwaveSys.scalingMode = particleSys.scalingMode;
+
+            // Air bends around something hot rather than only in front of it, so
+            // the shimmer is drawn a little wider than the particle it follows.
+            heatwaveSys.startSize = sizeStart.Value * HeatwaveSize;
+
+            ParticleSystem.EmissionModule emission = heatwaveSys.emission;
+            emission.rate = emissionRate.Value;
+            emission.enabled = true;
+
+            ParticleSystem.ShapeModule shape = heatwaveSys.shape;
+            shape.shapeType = (ParticleSystemShapeType)emissionShape.Value;
+            shape.angle = emissionAngle.Value;
+            shape.enabled = true;
+
+            // Every shimmer turns at its own rate, so the ripple rings never line
+            // up between two particles and the haze reads as moving air rather
+            // than as a row of identical stamps.
+            ParticleSystem.RotationOverLifetimeModule spin = heatwaveSys.rotationOverLifetime;
+            spin.z = new ParticleSystem.MinMaxCurve(-HeatwaveSpin, HeatwaveSpin);
+            spin.enabled = true;
+
+            Heatwave.SetStrength(heatwaveRenderer.material, heatwaveScale.Value);
+
+            // The emitter can be switched on in the frames before this runs, and
+            // Play does not reach a child that was still inactive at the time.
+            if (particleSys.isPlaying) heatwaveSys.Play();
         }
 
         private void ApplyTexture(string name)

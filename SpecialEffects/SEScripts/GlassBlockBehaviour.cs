@@ -55,6 +55,7 @@ namespace SpecialEffectsMod
 
         public override void SafeAwake()
         {
+            Skins.Hide(BlockBehaviour);
             shaderDict.Add("Alpha Blend", GameMaterials.Shaders.Particles.AlphaBlended);
             shaderDict.Add("Additive", GameMaterials.Shaders.Particles.Additive);
             shaderDict.Add("Overlay", GameMaterials.Shaders.Blocks.Pin);

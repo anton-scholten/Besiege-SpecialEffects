@@ -36,6 +36,7 @@ namespace SpecialEffectsMod
 
         public override void SafeAwake()
         {
+            Skins.Hide(BlockBehaviour);
             fontBundle = ModResource.GetAssetBundle("FontsBundle");
             foreach (Font font in fontBundle.AssetBundle.LoadAllAssets<Font>())
                 fontDict.Add(font.name, font);

@@ -113,6 +113,7 @@ namespace SpecialEffectsMod
 
         public override void SafeAwake()
         {
+            Skins.Hide(BlockBehaviour);
             sourceLight = gameObject.GetComponent<Light>();
             if (sourceLight == null) sourceLight = gameObject.AddComponent<Light>();
             sourceLight.enabled = false;
@@ -137,13 +138,18 @@ namespace SpecialEffectsMod
             colorMax = AddColourSlider("Max", "ColorMaxKey", Color.magenta, false);
             colorToggle = AddToggle("Auto Color", "ColorModeKey", false);
 
+            // The mapper groups controls by kind and orders each group by the
+            // order they were added in, so Activate is registered before the
+            // toggles it reveals: that keeps it at the top of the toggles --
+            // directly under the page menu -- instead of the strobe controls
+            // appearing above it and pushing it down the moment it is switched on.
+            patternToggle = AddToggle("Activate", "PatternModeKey", false);
             patternSequence = AddText("Sequence", "SequenceKey", "-123--4-9");
             patternSpeed = AddSlider("Interval", "PatternSpeedKey", 0.25f, 0f, 5f);
             patternNumbers = AddToggle("Numbers \n affect", "PatternNumbersModeKey", false);
             patternAffectsBrightness = AddToggle("Brightness", "PatternAffectsBrightnessKey", true);
             patternAffectsConeAngle = AddToggle("Cone Angle", "PatternAffectsConeAnglesKey", false);
             patternAffectsColor = AddToggle("Color", "PatternAffectsColorKey", false);
-            patternToggle = AddToggle("Activate", "PatternModeKey", false);
 
             lightModesDict.Add("Spot", LightType.Spot);
             lightModesDict.Add("Directional", LightType.Directional);

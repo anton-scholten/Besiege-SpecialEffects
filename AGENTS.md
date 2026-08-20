@@ -143,20 +143,104 @@ is already set. They are deliberately *not* shared code — the two read differe
 things out of a character (a light has a brightness and a cone angle; a pane has
 an alpha) and interpolate different sets of fields.
 
-**The heat shimmer is the game's own.** `FindHeatwaveMaterial` walks
-`PrefabMaster.BlockPrefabs[Bomb]` → `ExplodeOnCollideBlock.explosionEffect` →
-`PyroclasticPuff` → `Ripple` and instantiates that renderer's material. Nothing
-in this mod owns any of that hierarchy, so every step is null-checked: if Besiege
-moves it again, the *Heatwave* toggle stops working and nothing else does.
+**The heat shimmer draws nothing of its own — it bends what is behind it.**
+`Heatwave.cs` builds a material from the game's `Particles/Distort` shader, which
+grabs the screen once a frame and offsets it per pixel by a normal map. This mod
+ships no shader and no texture for that: the normal map (concentric ripples) and
+its mask are generated in code, once, and shared by every emitter.
+
+The ripples fade to flat before they reach the edge of the texture, and the mask
+fades to black there too. Both are deliberate and either alone would do: a
+distortion that is still non-zero at the edge of a particle's quad makes the
+quad's own outline visible, which is a hard-edged rectangle sitting in mid-air.
+Keep the falloff if you retune `Ripples` or `Slope`.
+
+`_BumpMap` is unpacked DXT5nm-style by that shader — X out of alpha, Y out of
+green — so `RippleNormals` writes X into red *and* alpha. That way it decodes
+correctly whether the shader was compiled for the DXT5nm path or the plain RGB
+one, and the texture is built linear rather than sRGB because both textures are
+numbers, not colour.
+
+**The shimmer is a second particle system, a child of the first.** Because
+`ParticleSystem.Play` and `Stop` both recurse into child systems, it starts and
+stops with the emitter without being driven separately — the one case that needs
+a hand is the emitter being switched on during the frames before `Begin` runs,
+which `ConfigureHeatwave` covers. It is found by name and reused, not cloned:
+`Begin` runs again on every simulation start, so cloning would stack up another
+shimmer each run.
+
+**All four blocks hide the mapper's skin picker, through `Skins.Hide`.** Each is
+its own mesh and its own texture with nothing to swap to, so the row is only ever
+an empty choice.
+
+**Do not do this with `BlockPrefab.SkinCanBeChanged`.** It looks like the switch
+for it — `CanGetNewVisuals` reads it and `BlockMapper.RefreshLists` skips the
+skin section when it is false — and it works, but `BlockPrefab.SetIcons` reads it
+too, and only calls `VisualController.SetPrefabIcons()` when it is true. Turn it
+off at prefab creation and every one of the mod's blocks shows a placeholder
+texture in the block menu instead of its icon. That was tried; the placeholder is
+what it looks like.
+
+What `Skins.Hide` does instead is hide the control. `RefreshLists` builds the
+block's `MVisual` and hands it to a `GenericController`, and
+`GenericController.CreateContainers` skips any `MapperType` whose
+`DisplayInMapper` is false — the same mechanism the Spot Light's option pages
+use. The `MVisual` has to exist before the mapper is first opened, or the game
+builds it there and shows it that once, so `Skins.Hide` builds it with the same
+call `RefreshLists` would. After that `RefreshLists` takes its reuse path, which
+refreshes the items and the label and leaves `DisplayInMapper` alone.
+
+Neither approach removes the *collapsed* skin button. `RefreshLists` registers
+that one — under `StatMaster.collapseSkinMapper`, which the player flips by
+collapsing the skin panel on any block and which sticks for the session — before
+it looks at the block at all. Only Besiege's own Skins setting
+(`OptionsMaster.skinsEnabled`) turns that off.
+
+**If you ever do need a block's prefab from `OnBlockPrefabCreation`, take it off
+the `GameObject` you are handed.** The `blockId` that callback gets is the
+mod-local id — 1 to 4, the `<ID>` in the block XMLs — so
+`PrefabMaster.BlockPrefabs[blockId]` answers with a base-game block of that
+number, and the prefab is not registered there yet in any case:
+`BlockLoader.CreatePrefab` fires the callback and `RegisterPrefab` is a later
+step. `BlockPrefabCreator.SetupBehaviour` has already filled in
+`BlockBehaviour.Prefab` by then.
+
+**The mapper groups controls by kind, not by the order they were added.**
+`BlockMapper.ShowMapper` lays out one controller per control type, top to bottom:
+non-footer menus, keys, toggles, values, sliders, colour sliders, emulated keys,
+limits, visuals, text, teams, custom, then footer menus. Registration order only
+decides the order *within* a group, and hidden controls are skipped entirely.
+
+That is why a toggle which reveals other toggles has to be registered before
+them: otherwise switching it on inserts the revealed ones above it and the thing
+you just clicked jumps down the panel. The Spot Light's strobe *Activate* is
+registered first for exactly this reason. It is also why the page menus appear at
+the top however late they are added, and why the Spot Light's light type,
+illumination and texture menus sit at the bottom — those three pass
+`footerMenu: true`.
 
 ## What was changed, and what is left alone
 
 The 2018 assembly was recovered faithfully first, and then changed in these ways.
 Read this before "fixing" any of it back.
 
-**`ExplodeOnCollideBlock.explosionEffectPrefab` is now `explosionEffect`.** The
-field was renamed at some point after 2018, which is what stopped the mod
-compiling at all.
+**The heatwave was rebuilt from scratch.** The 2018 version cloned the whole
+emitter with `Instantiate` and painted the clone with a material scavenged off
+the bomb's explosion — `PrefabMaster.BlockPrefabs[Bomb]` →
+`ExplodeOnCollideBlock.explosionEffectPrefab` → `PyroclasticPuff` → `Ripple`.
+That field had been renamed to `explosionEffect`, which is what stopped the mod
+compiling at all; fixing the name made it compile and did not make it work.
+
+The material behind that name is `FX/Glass/Stained BumpDistort`, an *opaque*
+stained-glass shader meant for a ring-shaped mesh. On a particle billboard it
+fills the quad, and its tint texture — a smoke ramp, sampled over UVs that mean
+nothing on a quad — comes out as flat grey. What you saw in the level was a drift
+of hard-edged grey shapes, not haze. The clone made it worse: parented under the
+emitter it inherited that transform's 0.1 scale twice over, and it went through
+`ParticleSystemRenderer` settings it had no business inheriting.
+
+It is `Heatwave.cs` and `ConfigureHeatwave` now — the game's own
+`Particles/Distort` shader on a purpose-made child system. See the section above.
 
 **Four texture paths in `Mod.xml` had the wrong case** — `Hex.png`, `Light1.png`,
 `Light2.png`, `Fire.png` against files named `hex.png`, `light1.png`,
@@ -192,6 +276,11 @@ debugging. The block-level `"Texture not found!"` and `"Failed to load texture!"
 messages are real diagnostics and stayed.
 
 **One console message said `"Fod Density Set. "`.** It says `"Fog"` now.
+
+**The Particle Emitter's "Heatwave Scale" slider is "Heatwave Strength".** It
+used to set the bump map's tiling; it sets the distortion's `_BumpAmt` now, which
+is the thing a player was reaching for. Same key, same range, and the default
+still lands on the shader's own default strength.
 
 Left alone deliberately:
 
