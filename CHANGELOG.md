@@ -1,5 +1,98 @@
 # Changelog
 
+## Unreleased
+
+**Added**
+
+- **Light shafts** on both the Spot Light block and the Spot Light level editor
+  object: visible beams through the air, shadowed by whatever stands in them.
+  Ported from EEX-slime's *No Light No Life* (Workshop item 3374723392) and
+  folded into the lamps that were already here rather than added as a second
+  object.
+
+  On the block they are a sixth options page, **Shafts**, with an **Activate**
+  switch and, under it, **Moving Shadows**, **Brightness**, **Fade**, and either
+  **Start** and **End** along the cone (spot) or a **Volume X/Y/Z** box
+  (directional). On the entity the same settings sit under a **Shafts** toggle on
+  the SETTINGS tab. A point light has no beam to draw, so neither offers it one.
+
+  Nothing extra has to be wired up to animate them: LightShafts reads the light's
+  own intensity, colour, cone angle and range every frame, so the strobe pattern
+  and the three Auto sliders drive the shafts for free.
+
+  **Moving Shadows** off renders the shadowmap once and keeps it — much cheaper,
+  but the silhouettes in the beam freeze. Leave it on for a beam something moves
+  through.
+
+- The Spot Light block is **lit in the build menu**, so the colour, the strobe,
+  the auto sweeps and the shafts can all be judged without starting a run. There
+  is no key to hold there, so it is simply on; none of the simulation's startup
+  work happens, so the joint, the mass and the collider stay as you left them; and
+  the sliders are re-read every frame rather than once, so moving one shows.
+
+  Starting a run resets all of it — the strobe to its first step, the lamp to
+  unlit and waiting on its key, the shafts off — so a run behaves exactly as it
+  would have without a preview.
+
+- The three **Auto** sweeps now start at their minimum each run, rather than at
+  whatever phase the wall clock happened to be at. They are the same ping-pong;
+  they are just measured from the start of the run instead of from the start of
+  the game.
+
+- Five more level variables on the Spot Light object, following the same rule as
+  the others — negative hands the setting back to its slider: `shafts`,
+  `shaftbrightness`, `shaftfade`, `shaftstart` and `shaftend`.
+
+  The shafts themselves are
+  [robcupisz/LightShafts](https://github.com/robcupisz/LightShafts) (public
+  domain), the same code the original mod compiled in, vendored as
+  `SEScripts/LightShafts.cs` and driven by shaders in the two `LightShafts` asset
+  bundles.
+
+  Deviations from that mod, all deliberate:
+
+  - Its multiplayer position sync is not ported. It broadcast a placed light's
+    transform every 50 fixed frames; level objects do not move.
+  - Its seven-language UI is not ported; the labels are the English ones.
+  - The shaft shaders are chosen by trying the platform's bundle and falling back
+    to the other, rather than assuming anything not Windows is a Mac. Besiege on
+    Linux is an OpenGL build and wants the Mac bundle.
+  - `LightShafts` gained an `OnDestroy`. Upstream never had one because its owner
+    is a scene light that outlives the level; here a light is created and
+    destroyed freely, and every render texture, material and the per-light Depth
+    Camera it allocates is `HideAndDontSave`, so nothing else would collect them.
+  - **Start** defaults to `0`, so a beam reaches the lamp unless told otherwise.
+  - **Start** and **End** are held apart by at least `0.01`, and **Start** is
+    held at least `0.005` off the lamp. Both are divisors in the shaft geometry:
+    the raymarch shader unstretches its shadowmap UVs by dividing by the distance
+    from the cone's apex, so a volume reaching the apex divides by zero and the
+    whole beam comes out NaN. Start at `0` drew no shafts at all before this.
+  - Switching **Moving Shadows** used to make the beam vanish. Upstream only
+    handles the static-to-dynamic direction; the other way round left the kept
+    shadowmap pointing at a pooled temporary that had already been handed back,
+    and `InitRenderTexture` went on using it because its size still matched.
+  - **Fade** reaches a spot light at all. `m_Extinction` only feeds the raymarch
+    shader's directional branch; its spot branch has a fixed `1/(1+25d²)` falloff
+    with no setting behind it, so on the default light type the slider did
+    nothing. The shader's lookup-table path for a custom falloff is filled
+    instead — with `exp(-fade·d)` for a directional light, which is exactly what
+    its own branch computes, and with that curve on top of the fixed falloff for a
+    spot light, so a Fade of `0` still looks like the falloff it replaces.
+  - A lamp is left out of its own shadowmap. Its housing and lens sit inside the
+    cone less than a unit in front of the light, so they were the nearest thing
+    the shadowmap saw and they blacked the whole beam out: no shafts at all until
+    **Start** cleared the block, at exactly `0.963 / range`, or until the lens was
+    set to `Hidden`. A real lamp does not shade itself.
+  - A kept shadowmap is re-rendered when the lamp itself moves, turns, or changes
+    range or cone angle. Upstream's light is placed once in a scene; a block or a
+    level object is aimed while you watch, and a shadowmap from where the lamp
+    used to be reads as broken rather than as cheap.
+
+  Existing machines and levels are unaffected: every key is new, so they load
+  with shafts off and look exactly as they did. The **Shafts** page is appended
+  to the block's options menu as index 5, leaving General, Brightness, Cone
+  Angle, Color and Strobe where they were.
+
 ## 0.4.0
 
 Everything below is on top of 0.3.2, the last released version. Machines built

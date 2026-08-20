@@ -35,8 +35,14 @@ namespace SpecialEffectsMod
         private const string VarIllumination = "illumination";
         private const string VarLens = "lens";
         private const string VarHousing = "housing";
+        private const string VarShafts = "shafts";
+        private const string VarShaftBrightness = "shaftbrightness";
+        private const string VarShaftFade = "shaftfade";
+        private const string VarShaftStart = "shaftstart";
+        private const string VarShaftEnd = "shaftend";
 
         private Light beam;
+        private LightShafts shafts;
         private GameObject lens;
         private MeshRenderer lensRenderer;
 
@@ -48,6 +54,16 @@ namespace SpecialEffectsMod
         private MMenu illumination;
         private MToggle showLens;
         private MToggle showHousing;
+
+        private MToggle showShafts;
+        private MToggle movingShadows;
+        private MSlider shaftBrightness;
+        private MSlider shaftFade;
+        private MSlider shaftStart;
+        private MSlider shaftEnd;
+        private MSlider volumeX;
+        private MSlider volumeY;
+        private MSlider volumeZ;
 
         private readonly IDictionary<string, LightType> lightTypeDict =
             new Dictionary<string, LightType>();
@@ -64,6 +80,7 @@ namespace SpecialEffectsMod
         private void Awake()
         {
             beam = SpotLightEntity.Beam(gameObject);
+            shafts = Shafts.Add(beam.gameObject);
             lens = SpotLightEntity.Lens(gameObject);
             lensRenderer = Attach.Component<MeshRenderer>(lens);
             AddControls();
@@ -103,6 +120,18 @@ namespace SpecialEffectsMod
             showLens = holder.AddToggle("Lens", "EntityLensKey", true);
             showHousing = holder.AddToggle("Housing", "EntityHousingKey", true);
 
+            // After the two above so it sits below them, and before the toggle it
+            // reveals so switching it on does not push it down the panel.
+            showShafts = holder.AddToggle("Shafts", "EntityShaftsKey", false);
+            movingShadows = holder.AddToggle("Moving Shadows", "EntityShaftShadowsKey", true);
+
+            shaftBrightness = holder.AddSlider("Shaft Brightness", "EntityShaftBrightnessKey", 3f, 0f, 20f);
+            shaftFade = holder.AddSlider("Shaft Fade", "EntityShaftFadeKey", 0.5f, 0f, 20f);
+            shaftStart = holder.AddSlider("Shaft Start", "EntityShaftStartKey", 0f, 0f, 1f);
+            shaftEnd = holder.AddSlider("Shaft End", "EntityShaftEndKey", 1f, 0f, 1f);
+            volumeX = holder.AddSlider("Volume X", "EntityShaftVolumeXKey", 10f, 0f, 200f);
+            volumeY = holder.AddSlider("Volume Y", "EntityShaftVolumeYKey", 10f, 0f, 200f);
+            volumeZ = holder.AddSlider("Volume Z", "EntityShaftVolumeZKey", 20f, 0f, 200f);
         }
 
         // Aimed and applied every frame: the housing mesh arrives asynchronously,
@@ -140,6 +169,41 @@ namespace SpecialEffectsMod
                 && intensity >= LensVisibleIntensity
                 && tint != Color.black);
             ShowHousing(Switch(showHousing, VarHousing));
+            ApplyShafts();
+        }
+
+        // Visible beams through the air. Shafts need a beam with a direction, so a
+        // point light cannot have them and is not offered them.
+        private void ApplyShafts()
+        {
+            bool directional = beam.type == LightType.Directional;
+            bool possible = beam.type != LightType.Point;
+            bool on = possible && Switch(showShafts, VarShafts);
+
+            // Setting DisplayInMapper to what it already is returns immediately,
+            // so this costs nothing on a frame where nothing changed.
+            Controls.Show(possible, showShafts);
+            Controls.Show(on, movingShadows, shaftBrightness, shaftFade);
+            Controls.Show(on && !directional, shaftStart, shaftEnd);
+            Controls.Show(on && directional, volumeX, volumeY, volumeZ);
+
+            if (on)
+            {
+                float bright = shaftBrightness.Value;
+                float fade = shaftFade.Value;
+                float start = shaftStart.Value;
+                float end = shaftEnd.Value;
+                Variable(VarShaftBrightness, ref bright);
+                Variable(VarShaftFade, ref fade);
+                Variable(VarShaftStart, ref start);
+                Variable(VarShaftEnd, ref end);
+
+                Shafts.Set(shafts, beam.type, bright, fade, start, end,
+                    new Vector3(volumeX.Value, volumeY.Value, volumeZ.Value),
+                    movingShadows.IsActive);
+            }
+
+            Shafts.Follow(shafts, on, gameObject);
         }
 
         private bool Variable(string key, ref float value)

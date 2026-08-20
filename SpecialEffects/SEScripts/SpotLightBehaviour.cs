@@ -18,6 +18,7 @@ namespace SpecialEffectsMod
         private const int PageConeAngle = 2;
         private const int PageColor = 3;
         private const int PageStrobe = 4;
+        private const int PageShafts = 5;
 
         // Lens appearance, likewise saved as an index into the Texture menu.
         private const int LensNormal = 0;
@@ -81,6 +82,17 @@ namespace SpecialEffectsMod
         private MToggle patternAffectsConeAngle;
         private MToggle patternAffectsColor;
 
+        private MToggle shaftsToggle;
+        private MToggle shaftShadows;
+        private MSlider shaftBrightness;
+        private MSlider shaftFade;
+        private MSlider shaftStart;
+        private MSlider shaftEnd;
+        private MSlider shaftVolumeX;
+        private MSlider shaftVolumeY;
+        private MSlider shaftVolumeZ;
+        private LightShafts shafts;
+
         private GameObject lightLens;
         private MeshRenderer meshRenderLens;
         private MeshFilter meshFilterLens;
@@ -89,6 +101,12 @@ namespace SpecialEffectsMod
         private int startFrames;
         private float localTimeEffects;
         private float localTimePattern;
+
+        // When the current run, or the current preview, began. The ping-pongs are
+        // phase-locked to this rather than to the clock, so both start at the min.
+        private float effectsStarted;
+        private float effectsStartedUnscaled;
+        private bool previewing;
 
         // What the light is set to right now, which the pattern reads back when a
         // sequence character means "leave it as it is".
@@ -113,6 +131,7 @@ namespace SpecialEffectsMod
             Skins.Hide(BlockBehaviour);
             sourceLight = Attach.Component<Light>(gameObject);
             sourceLight.enabled = false;
+            shafts = Shafts.Add(gameObject);
 
             CreateLens();
 
@@ -145,6 +164,18 @@ namespace SpecialEffectsMod
             patternAffectsConeAngle = AddToggle("Cone Angle", "PatternAffectsConeAnglesKey", false);
             patternAffectsColor = AddToggle("Color", "PatternAffectsColorKey", false);
 
+            // Same rule as the strobe page: the switch goes in before what it
+            // reveals, or it slides down the panel when turned on.
+            shaftsToggle = AddToggle("Activate", "ShaftsModeKey", false);
+            shaftShadows = AddToggle("Moving Shadows", "ShaftShadowsKey", true);
+            shaftBrightness = AddSlider("Brightness", "ShaftBrightnessKey", 3f, 0f, 20f);
+            shaftFade = AddSlider("Fade", "ShaftFadeKey", 0.5f, 0f, 20f);
+            shaftStart = AddSlider("Start", "ShaftStartKey", 0f, 0f, 1f);
+            shaftEnd = AddSlider("End", "ShaftEndKey", 1f, 0f, 1f);
+            shaftVolumeX = AddSlider("Volume X", "ShaftVolumeXKey", 10f, 0f, 200f);
+            shaftVolumeY = AddSlider("Volume Y", "ShaftVolumeYKey", 10f, 0f, 200f);
+            shaftVolumeZ = AddSlider("Volume Z", "ShaftVolumeZKey", 20f, 0f, 200f);
+
             lightModesDict.Add("Spot", LightType.Spot);
             lightModesDict.Add("Directional", LightType.Directional);
             lightModesDict.Add("Point", LightType.Point);
@@ -161,7 +192,7 @@ namespace SpecialEffectsMod
             timeDependentEffects = AddToggle("TimeScale", "TimeDependentEffectsKey", true);
 
             lightOptionsMenu = AddMenu("LightOptionsKey", 0,
-                new List<string> { "General", "Brightness", "Cone Angle", "Color", "Strobe" }, false);
+                new List<string> { "General", "Brightness", "Cone Angle", "Color", "Strobe", "Shafts" }, false);
             textureMenu = AddMenu("TextureMenu", 0,
                 new List<string> { "Normal", "Hidden", "Sphere", "Box" }, true);
 
@@ -171,6 +202,8 @@ namespace SpecialEffectsMod
             coneAngleToggle.Toggled += ShowConeAngleControls;
             colorToggle.Toggled += ShowColorControls;
             patternToggle.Toggled += ShowPatternControls;
+            shaftsToggle.Toggled += ShowShaftControls;
+            lightTypes.ValueChanged += LightTypeChanged;
 
             colorDefault.ValueChanged += LensColorChanged;
             colorMin.ValueChanged += LensColorChanged;
@@ -211,6 +244,14 @@ namespace SpecialEffectsMod
             patternToggle.DisplayInMapper = value == PageStrobe;
             if (value == PageStrobe) ShowPatternControls(patternToggle.IsActive);
             else ShowPatternControls(false);
+
+            ShowShaftControls(shaftsToggle.IsActive);
+        }
+
+        // The shafts page depends on the light's type, which is set on another one.
+        private void LightTypeChanged(int value)
+        {
+            ShowShaftControls(shaftsToggle.IsActive);
         }
 
         // On the page: the fixed value and its "Auto" switch. Off it: nothing.
@@ -254,6 +295,23 @@ namespace SpecialEffectsMod
         {
             Controls.Show(isActive, patternSequence, patternSpeed, patternNumbers,
                 patternAffectsBrightness, patternAffectsConeAngle, patternAffectsColor);
+        }
+
+        // A point light has no beam, so it is offered nothing and the page is
+        // empty. A spot light's volume runs along its cone; a directional one's is
+        // a box.
+        private void ShowShaftControls(bool isActive)
+        {
+            LightType type = lightModesDict[lightTypes.Selection];
+            bool onPage = lightOptionsMenu.Value == PageShafts;
+            bool possible = type != LightType.Point;
+            bool on = onPage && isActive && possible;
+
+            shaftsToggle.DisplayInMapper = onPage && possible;
+            Controls.Show(on, shaftShadows, shaftBrightness, shaftFade);
+            Controls.Show(on && type != LightType.Directional, shaftStart, shaftEnd);
+            Controls.Show(on && type == LightType.Directional,
+                shaftVolumeX, shaftVolumeY, shaftVolumeZ);
         }
 
         // In the build menu the lens is restyled as soon as the menu changes.
@@ -335,35 +393,7 @@ namespace SpecialEffectsMod
             // is left alone entirely rather than written every frame.
             if (!IsLit()) return;
 
-            if (timeDependentEffects.IsActive)
-            {
-                localTimeEffects = Time.time;
-                localTimePattern = Time.timeScale;
-            }
-            else
-            {
-                localTimeEffects = Time.unscaledTime;
-                localTimePattern = 1f;
-            }
-
-            if (brightnessToggle.IsActive)
-            {
-                currentBrightness = PingPong(brightnessMin.Value, brightnessMax.Value, brightnessSpeed.Value);
-                sourceLight.intensity = currentBrightness;
-            }
-            if (coneAngleToggle.IsActive)
-            {
-                currentConeAngle = PingPong(coneAngleMin.Value, coneAngleMax.Value, coneAngleSpeed.Value);
-                sourceLight.spotAngle = currentConeAngle;
-            }
-            if (colorToggle.IsActive)
-            {
-                currentColor = Color.Lerp(colorMin.Value, colorMax.Value,
-                    Mathf.PingPong(localTimeEffects * colorSpeed.Value, 1f));
-                sourceLight.color = currentColor;
-            }
-
-            if (patternToggle.IsActive) StepPattern();
+            Animate(false);
 
             if (activate.IsPressed) sourceLight.enabled = !sourceLight.isActiveAndEnabled;
 
@@ -372,6 +402,100 @@ namespace SpecialEffectsMod
                 sourceLight.enabled = false;
 
             UpdateLens();
+            UpdateShafts();
+        }
+
+        // Lit in the build menu too, so the colour, the strobe and the shafts can
+        // be judged without starting a run. No key -- there is nothing to hold down
+        // here -- and none of the simulation's startup work, so the joint, the mass
+        // and the collider stay as the builder left them.
+        public override void BuildingUpdate()
+        {
+            if (!previewing)
+            {
+                previewing = true;
+                ResetAnimation();
+            }
+
+            sourceLight.enabled = IsLit();
+            if (sourceLight.enabled)
+            {
+                sourceLight.type = lightModesDict[lightTypes.Selection];
+                sourceLight.renderMode = illuminationTypeDict[illuminationType.Selection];
+                sourceLight.range = range.Value;
+                sourceLight.shadows = LightShadows.Soft;
+                sourceLight.shadowStrength = textureMenu.Value == LensNormal ? 0f : 1f;
+                sequence = patternSequence.Value;
+                Animate(true);
+            }
+
+            UpdateLens();
+            UpdateShafts();
+        }
+
+        // One frame of the animated settings. `live` re-reads the sliders every
+        // frame, which the build menu wants and a simulation does not: there the
+        // fixed values are read once, in Begin.
+        private void Animate(bool live)
+        {
+            if (timeDependentEffects.IsActive)
+            {
+                localTimeEffects = Time.time - effectsStarted;
+                localTimePattern = Time.timeScale;
+            }
+            else
+            {
+                localTimeEffects = Time.unscaledTime - effectsStartedUnscaled;
+                localTimePattern = 1f;
+            }
+
+            if (brightnessToggle.IsActive)
+                currentBrightness = PingPong(brightnessMin.Value, brightnessMax.Value, brightnessSpeed.Value);
+            else if (live) currentBrightness = brightnessDefault.Value;
+
+            if (coneAngleToggle.IsActive)
+                currentConeAngle = PingPong(coneAngleMin.Value, coneAngleMax.Value, coneAngleSpeed.Value);
+            else if (live) currentConeAngle = coneAngleDefault.Value;
+
+            if (colorToggle.IsActive)
+                currentColor = Color.Lerp(colorMin.Value, colorMax.Value,
+                    Mathf.PingPong(localTimeEffects * colorSpeed.Value, 1f));
+            else if (live) currentColor = colorDefault.Value;
+
+            if (brightnessToggle.IsActive || live) sourceLight.intensity = currentBrightness;
+            if (coneAngleToggle.IsActive || live) sourceLight.spotAngle = currentConeAngle;
+            if (colorToggle.IsActive || live) sourceLight.color = currentColor;
+
+            if (patternToggle.IsActive) StepPattern();
+        }
+
+        // Strobe back to its first step, ping-pongs back to their minimum: a run
+        // starts where the pattern starts, not wherever the preview had got to.
+        private void ResetAnimation()
+        {
+            strobe.Reset();
+            effectsStarted = Time.time;
+            effectsStartedUnscaled = Time.unscaledTime;
+            localTimeEffects = 0f;
+            localTimePattern = 1f;
+        }
+
+        // Visible beams through the air. LightShafts reads the light's own
+        // intensity, colour, cone angle and range every frame, so the strobe and
+        // the Auto sliders drive the shafts too with nothing wired here.
+        private void UpdateShafts()
+        {
+            bool on = shaftsToggle.IsActive
+                && sourceLight.enabled
+                && sourceLight.type != LightType.Point;
+
+            if (on)
+                Shafts.Set(shafts, sourceLight.type, shaftBrightness.Value, shaftFade.Value,
+                    shaftStart.Value, shaftEnd.Value,
+                    new Vector3(shaftVolumeX.Value, shaftVolumeY.Value, shaftVolumeZ.Value),
+                    shaftShadows.IsActive);
+
+            Shafts.Follow(shafts, on, gameObject);
         }
 
         // The startup frame: everything that needs the block to be simulating.
@@ -524,7 +648,18 @@ namespace SpecialEffectsMod
         {
             hasStarted = false;
             startFrames = 0;
-            strobe.Reset();
+            previewing = false;
+            shafts.enabled = false;
+            sourceLight.enabled = false;
+            ResetAnimation();
+        }
+
+        // Nothing calls SimulateUpdateAlways once a run ends, so the beams would
+        // stay as the run left them. BuildingUpdate restarts the preview.
+        public override void OnSimulateStop()
+        {
+            shafts.enabled = false;
+            previewing = false;
         }
     }
 }

@@ -3,12 +3,12 @@
 Lights, glass, particles and text, in
 [Besiege](https://store.steampowered.com/app/346010/Besiege/).
 
-![A spot light block casting red, green and blue across the ground](Previous_stuff/Pics/Pic1.jpg)
+![A machine with two lit spot lights, one casting a visible beam across the water](Promo_4.jpg)
 
 Four blocks that add nothing to how a machine works and everything to how it
-looks: a real light you can drive from a key, coloured glass, a particle emitter
-with most of Unity's particle system behind it, and a block that writes text in
-the world.
+looks: a real light you can drive from a key — with a beam you can see through
+the air — coloured glass, a particle emitter with most of Unity's particle system
+behind it, and a block that writes text in the world.
 
 ## Install
 
@@ -30,12 +30,16 @@ Most settings are read when the simulation starts, so a slider moved mid-run
 takes effect on the next run. The exceptions are the ones that could not work
 that way: the strobes, the auto sliders, and the emitter's random modes.
 
+The Spot Light is lit in the build menu, so its colour, strobe, sweeps and shafts
+can be judged before starting a run. Starting one resets all of it, so a run is
+unaffected by whatever the preview was doing.
+
 ## Spot Light
 
 ![The spot light block, its mapper, and the light it casts](Previous_stuff/Pics/Settings.jpg)
 
 An actual Unity light on a block. The menu at the top of the mapper switches
-between five pages of settings.
+between six pages of settings.
 
 | General | What it does |
 | --- | --- |
@@ -55,6 +59,26 @@ and a speed, and sweeps between them.
 brightness — and a cone angle, and a hue — and anything else holds what is
 already set. **Interval** is the time per character, and three toggles pick which
 of brightness, cone angle and colour the pattern is allowed to drive.
+
+**Shafts** makes the beam itself visible in the air, shadowed by whatever stands
+in it.
+
+| Shafts | What it does |
+| --- | --- |
+| Activate | Draws the beam. A point light gets nothing — there is no beam to draw |
+| Moving Shadows | How often the shadows in the beam are worked out — below |
+| Brightness | How strong the beam looks |
+| Fade | How fast it thins along its length. `0` is as even as the light itself |
+| Start / End | Where along the cone it is drawn, `0` to `1`. Start at `0` reaches the lamp |
+| Volume X / Y / Z | The box a **directional** light fills, in place of Start and End |
+
+**Moving Shadows** on redoes the shadows in the beam every frame, so a machine
+driving through it cuts a moving shadow. Off, they are worked out once and kept:
+much cheaper, but only the scenery still shadows the beam. Aiming or resizing the
+lamp redoes them either way.
+
+Shafts are expensive — each lit one costs about an extra render of the scene
+every frame. One looks superb, a dozen will not run.
 
 ![Coloured light trails from a machine flying past](Previous_stuff/Pics/Medusa3.jpg)
 
@@ -169,6 +193,7 @@ panel — the same sliders and colour picker the blocks use.
 | Color | Colour of the light, and of the lens |
 | Lens | Whether the glowing disc in the housing is drawn |
 | Housing | Whether the lamp itself is drawn, leaving only the beam |
+| Shafts | The visible beam, with the same settings the block has |
 
 A level can also change one while it runs, with Besiege's own **Modify Variable**
 event. Its *scope of change* picker aims at a single object, so a trigger
@@ -184,6 +209,10 @@ anywhere in the level can drive one lamp and leave the rest alone.
 | `illumination` | `0` pixel, `1` vertex, `2` auto |
 | `lens` | `0` hides the lens, above `0` shows it |
 | `housing` | `0` hides the housing, above `0` shows it |
+| `shafts` | `0` hides the visible beam, above `0` shows it |
+| `shaftbrightness` | How strong the beam looks, `0` to `20` |
+| `shaftfade` | How fast the beam thins with distance, `0` to `20` |
+| `shaftstart` `shaftend` | Where along the cone the beam is drawn, `0` to `1` |
 
 Set a variable **negative** to hand that setting back to its slider. Nothing in
 Besiege can delete a variable once it is set, so that is how a level gives a lamp
@@ -197,6 +226,9 @@ The C# for this mod was lost and has been recovered from the shipped 2018
 assembly. [docs/RECOVERY.md](docs/RECOVERY.md) is the record of how, and how far
 the result can be trusted. [CHANGELOG.md](CHANGELOG.md) lists what was broken in
 that build and has since been fixed.
+
+The light shafts are [robcupisz/LightShafts](https://github.com/robcupisz/LightShafts),
+public domain, by way of [No Light No Life](https://steamcommunity.com/sharedfiles/filedetails/?id=3374723392).
 
 AI agent? see [AGENTS.md](AGENTS.md) for layout, build, and any relevant info.
 [docs/MODDING-NOTES.md](docs/MODDING-NOTES.md) has some info on Besiege's modding

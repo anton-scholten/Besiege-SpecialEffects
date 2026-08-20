@@ -1,7 +1,7 @@
 <Mod>	
 	<Name>SpecialEffects</Name>
 	<Author>wizz6rd</Author>
-	<Version>0.4.0</Version>
+	<Version>0.4.1</Version>
 	
 	<Description>
 	Adds SpotLight, Glass, ParticleEmitter and Text blocks, plus a Spot Light object for the level editor.
@@ -47,6 +47,8 @@
 		
 		<!-- Asset Bundles -->
 		<AssetBundle name="FontsBundle" path="fontsbundle" />
+		<AssetBundle name="LightShaftsShadersWin" path="LightShafts\LightShaftsShadersWin" />
+		<AssetBundle name="LightShaftsShadersMac" path="LightShafts\LightShaftsShadersMac" />
 		
 		<!-- Blocks -->
 		<Mesh name="SpotLight_mesh" path="Blocks\SpotLight_mesh.obj" />
@@ -102,9 +104,10 @@
 		<Texture name="hmm" path="Particles\hmm.png" />
 		<Texture name="Thomas" path="Particles\Thomas.png" />
 		
+		<Mesh name="Lens" path="Lens.obj" />
+		
 		<!-- Unused -->
 		<Mesh name="Cone" path="Cone.obj" />
-		<Mesh name="Lens" path="Lens.obj" />
 		<Texture name="SquareCookie" path="SquareCookie.png" />
 		
 	</Resources>

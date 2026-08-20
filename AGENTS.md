@@ -67,6 +67,12 @@ Note the keys are not tidy and must stay untidy: `"Activate"`, `"Range"` and
 `ColorKey` does, and the Spot Light's strobe page uses
 `"PatternAffectsConeAnglesKey"` — plural, unlike its two neighbours.
 
+**Light shafts are expensive and uncapped.** One enabled `LightShafts` costs a
+full extra scene render per frame -- `Camera.RenderWithShader` into a 1024²
+shadowmap -- plus six 512² render textures and about five fullscreen passes. That
+is by design: a machine with a dozen shaft blocks will crawl, and there is
+deliberately nothing stopping it. `Moving Shadows` off is the cheap mode.
+
 **Do not reorder a menu.** A machine saves its choice as an *index*, so inserting
 anything but at the end repoints every saved block at a different option. That
 covers the Spot Light's options pages and lens styles, the Particle Emitter's
@@ -103,6 +109,19 @@ grid as a base-game one. The Glass block deliberately uses `±0.05` on its left
 and right points instead: the pane is 0.09 thick, so the base-game offset would
 put those points well clear of it. The Particle Emitter has none — it is a nozzle
 and nothing is meant to attach to its sides.
+
+## Third-party code and art
+
+`SEScripts/LightShafts.cs` is vendored from
+[robcupisz/LightShafts](https://github.com/robcupisz/LightShafts), which is public
+domain. Upstream splits it across three partial-class files; it is merged into one
+here, and the header comment lists every change made to it. The shaders it needs
+are prebuilt Unity 5.4 asset bundles in `Resources/LightShafts/`, taken from
+EEX-slime's *No Light No Life* (Workshop 3374723392) because there is no Unity
+editor on this machine to rebuild them from the upstream `.shader` files.
+
+No art was carried over: the shafts hang off the lamps this mod already had, so
+the only third-party files are the code above and the shader bundles.
 
 ## Why it is built the way it is
 
