@@ -41,6 +41,10 @@ One file per type, named after it. The four `<Block>Module` classes are two-line
 XML markers and could share a file; they do not, so that a block's module and its
 behaviour sit next to each other in a directory listing.
 
+Four of those files are shared rather than a block's own: `Attach` (find or make a
+child object, get or add a component), `Controls` (show or hide a run of mapper
+controls), `Strobe` (the sequence walker below), and `Skins`.
+
 ## Hard rules
 
 **Never change `<ID>` in `Mod.xml`.** The game generated it on first load, and
@@ -135,13 +139,19 @@ Collider* on, and a Spot Light in any lens style but *Normal* all set
 at that point, and leaving the mass on would hang weight off the machine that
 nothing can hold up.
 
-**The strobe patterns in the Spot Light and the Glass block are the same
-machine.** A string of characters is walked one per `Interval` seconds, with the
-frame in between interpolating towards the next character's values. `-` is a gap;
-a digit is a value, but only with *Numbers affect* on; anything else holds what
-is already set. They are deliberately *not* shared code — the two read different
-things out of a character (a light has a brightness and a cone angle; a pane has
-an alpha) and interpolate different sets of fields.
+**The Spot Light and the Glass block run the same strobe, and share `Strobe` for
+it.** A string of characters is walked one per `Interval` seconds, with the frames
+in between blending towards the next character's values. `-` is a gap; a digit is
+a value, but only with *Numbers affect* on; anything else holds what is already
+set.
+
+`Strobe` owns the walking only. What a character *means* is not shared and should
+not be: a light reads a brightness, a cone angle and a hue out of one; a pane
+reads a colour and an alpha. `Strobe.Step` returns false on the frame the sequence
+rolls over — nothing is drawn that frame, which is the original behaviour — and
+sets `restart` on the frame the pair changes, which is when each block re-reads
+its own values. Reading them on that frame only is deliberate: a slider moved
+mid-run takes effect at the next character rather than part-way through a blend.
 
 **The heat shimmer draws nothing of its own — it bends what is behind it.**
 `Heatwave.cs` builds a material from the game's `Particles/Distort` shader, which

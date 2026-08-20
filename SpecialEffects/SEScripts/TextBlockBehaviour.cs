@@ -67,32 +67,19 @@ namespace SpecialEffectsMod
         }
 
         // The text lives on a child object so it survives the block's own mesh
-        // being hidden. Reused if it is already there, which it is on a reload.
+        // being hidden.
         private void CreateTextObject()
         {
-            foreach (Transform child in gameObject.GetComponentsInChildren<Transform>())
+            bool created;
+            textObject = Attach.Child(gameObject.transform, "TextHandler", out created);
+            if (created)
             {
-                if (child.name == "TextHandler")
-                {
-                    textObject = child.gameObject;
-                    break;
-                }
-            }
-
-            if (textObject == null)
-            {
-                textObject = new GameObject();
-                textObject.transform.name = "TextHandler";
-                textObject.transform.parent = gameObject.transform;
                 textObject.transform.localPosition = new Vector3(0f, 0f, 0.5f);
-                textObject.transform.rotation = gameObject.transform.rotation;
                 textObject.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
                 textObject.transform.localScale = new Vector3(1f, 1f, 1f);
             }
 
-            textComponent = textObject.GetComponent<DynamicText>();
-            if (textComponent == null)
-                textComponent = textObject.AddComponent<DynamicText>();
+            textComponent = Attach.Component<DynamicText>(textObject);
             textComponent.alignment = TextAlignment.Center;
             textComponent.anchor = DynamicTextAnchor.MiddleCenter;
         }
@@ -132,9 +119,9 @@ namespace SpecialEffectsMod
             textComponent.letterSpacing = value;
         }
 
-        // Colour and opacity are one setting as far as DynamicText is concerned,
-        // so both sliders end up here. The font's shared material needs the same
-        // tint: the mesh colour alone does not reach the glyph shader.
+        // Colour and opacity are one setting to DynamicText, so both sliders land
+        // here. The font's material needs the tint too: the mesh colour alone does
+        // not reach the glyph shader.
         private void ApplyColor()
         {
             Color col = textColor.Value;
@@ -163,8 +150,8 @@ namespace SpecialEffectsMod
             }
         }
 
-        // Besiege keeps the behaviour alive between runs, so the startup work
-        // above has to be armed again or a second run never hides the mesh.
+        // Besiege keeps the behaviour alive between runs, so this has to be armed
+        // again or a second run never hides the mesh.
         public override void OnSimulateStart()
         {
             hasStarted = false;

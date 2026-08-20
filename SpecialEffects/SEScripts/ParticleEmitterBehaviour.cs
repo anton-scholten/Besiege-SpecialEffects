@@ -40,7 +40,7 @@ namespace SpecialEffectsMod
 
         private GameObject particleHandler;
         private ParticleSystem particleSys;
-        private Renderer particleRenderer;
+        private ParticleSystemRenderer particleRenderer;
 
         private GameObject heatwaveHandler;
         private ParticleSystem heatwaveSys;
@@ -194,8 +194,7 @@ namespace SpecialEffectsMod
             shaderDict.Add("Render Text Cut", GameMaterials.Shaders.Misc.RenderTextureCutout);
             shaderMenu = AddMenu("PartShaderMenuKey", 1, shaderDict.Keys.ToList(), false);
 
-            // The particle textures are named in ParticleEmitter.xml rather than
-            // here, so the set can be changed without rebuilding the assembly.
+            // Named in ParticleEmitter.xml, so the set can change without a rebuild.
             foreach (object reference in Module.ParticleTextures)
             {
                 ModTexture texture = (ModTexture)GetResource((Modding.Serialization.ResourceReference)reference);
@@ -220,27 +219,23 @@ namespace SpecialEffectsMod
         }
 
         // The particle system lives on a child object of its own, pointing out of
-        // the block's nozzle. Reused if it is already there, which it is on a
-        // reload.
+        // the block's nozzle.
         private void CreateParticleSystem()
         {
-            particleHandler = FindChild(gameObject.transform, "ParticleHandler");
-            if (particleHandler == null)
+            bool created;
+            particleHandler = Attach.Child(gameObject.transform, "ParticleHandler", out created);
+            if (created)
             {
-                particleHandler = NewChild(gameObject.transform, "ParticleHandler");
                 particleHandler.transform.localPosition = Vector3.forward * 1.8f;
                 particleHandler.transform.localRotation =
                     Quaternion.Euler(-particleHandler.transform.rotation.eulerAngles);
                 particleHandler.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
             }
 
-            particleSys = particleHandler.GetComponent<ParticleSystem>();
-            if (particleSys == null) particleSys = particleHandler.AddComponent<ParticleSystem>();
+            particleSys = Attach.Component<ParticleSystem>(particleHandler);
             particleSys.Stop();
             particleSys.playOnAwake = false;
-
-            particleRenderer = particleHandler.GetComponent<Renderer>();
-            if (particleRenderer == null) particleRenderer = particleHandler.AddComponent<Renderer>();
+            particleRenderer = Attach.Component<ParticleSystemRenderer>(particleHandler);
 
             CreateHeatwaveSystem();
 
@@ -256,50 +251,24 @@ namespace SpecialEffectsMod
             moduleCollision = particleSys.collision;
         }
 
-        // The shimmer is a second particle system sitting exactly on the first, so
-        // it follows the emitter's nozzle for free -- and, because Play and Stop
-        // both recurse into child systems, it starts and stops with the emitter
-        // without being driven separately.
-        //
-        // It is a child object found by name rather than a clone of the emitter,
-        // so that re-running the simulation reuses this one instead of adding
-        // another shimmer on top of it every run.
+        // The shimmer sits exactly on the emitter as a child of it, which is also
+        // what makes Play and Stop reach it: both recurse into child systems. It is
+        // found by name rather than cloned, so re-running the simulation reuses
+        // this one instead of stacking another shimmer on top every run.
         private void CreateHeatwaveSystem()
         {
-            heatwaveHandler = FindChild(particleHandler.transform, "HeatwaveHandler");
-            if (heatwaveHandler == null)
-            {
-                heatwaveHandler = NewChild(particleHandler.transform, "HeatwaveHandler");
-                heatwaveHandler.transform.localPosition = Vector3.zero;
-                heatwaveHandler.transform.localRotation = Quaternion.identity;
-                heatwaveHandler.transform.localScale = Vector3.one;
-            }
+            heatwaveHandler = Attach.Child(particleHandler.transform, "HeatwaveHandler");
+            heatwaveHandler.transform.localPosition = Vector3.zero;
+            heatwaveHandler.transform.localRotation = Quaternion.identity;
+            heatwaveHandler.transform.localScale = Vector3.one;
 
-            heatwaveSys = heatwaveHandler.GetComponent<ParticleSystem>();
-            if (heatwaveSys == null) heatwaveSys = heatwaveHandler.AddComponent<ParticleSystem>();
+            heatwaveSys = Attach.Component<ParticleSystem>(heatwaveHandler);
             heatwaveSys.Stop();
             heatwaveSys.playOnAwake = false;
 
-            heatwaveRenderer = heatwaveHandler.GetComponent<ParticleSystemRenderer>();
-            if (heatwaveRenderer == null)
-                heatwaveRenderer = heatwaveHandler.AddComponent<ParticleSystemRenderer>();
+            heatwaveRenderer = Attach.Component<ParticleSystemRenderer>(heatwaveHandler);
             if (Heatwave.Available) heatwaveRenderer.material = Heatwave.CreateMaterial();
             heatwaveHandler.SetActive(false);
-        }
-
-        private static GameObject FindChild(Transform parent, string name)
-        {
-            foreach (Transform child in parent.GetComponentsInChildren<Transform>())
-                if (child.name == name) return child.gameObject;
-            return null;
-        }
-
-        private static GameObject NewChild(Transform parent, string name)
-        {
-            GameObject child = new GameObject();
-            child.transform.name = name;
-            child.transform.parent = parent;
-            return child;
         }
 
         // Only one page of the settings menu is shown at a time; everything else
@@ -308,39 +277,39 @@ namespace SpecialEffectsMod
         {
             ShowGeneralControls(value == PageGeneral);
 
-            Show(value == PageEmission, emissionRate, emissionShape, emissionAngle);
-            Show(value == PageDampen, dampenValue, dampenLimit);
+            Controls.Show(value == PageEmission, emissionRate, emissionShape, emissionAngle);
+            Controls.Show(value == PageDampen, dampenValue, dampenLimit);
 
             if (value == PageColor)
             {
-                Show(true, heatwave, colorStart, opacityStart, colorChanges);
+                Controls.Show(true, heatwave, colorStart, opacityStart, colorChanges);
                 heatwaveScale.DisplayInMapper = heatwave.IsActive;
                 ShowColorChangeControls(colorChanges.IsActive);
             }
             else
             {
-                Show(false, heatwave, heatwaveScale, colorStart, opacityStart, colorChanges,
+                Controls.Show(false, heatwave, heatwaveScale, colorStart, opacityStart, colorChanges,
                     colorMenu, colorEnd, opacityEnd, colorSpeedMin, colorSpeedMax);
             }
 
             if (value == PageSize)
             {
-                Show(true, sizeStart, sizeChanges);
+                Controls.Show(true, sizeStart, sizeChanges);
                 ShowSizeChangeControls(sizeChanges.IsActive);
             }
             else
             {
-                Show(false, sizeStart, sizeChanges, sizeMenu, sizeEnd, sizeSpeedMin, sizeSpeedMax);
+                Controls.Show(false, sizeStart, sizeChanges, sizeMenu, sizeEnd, sizeSpeedMin, sizeSpeedMax);
             }
 
             if (value == PageRotation)
             {
-                Show(true, rotationStart, rotationChanges);
+                Controls.Show(true, rotationStart, rotationChanges);
                 ShowRotationChangeControls(rotationChanges.IsActive);
             }
             else
             {
-                Show(false, rotationStart, rotationChanges, rotationMenu,
+                Controls.Show(false, rotationStart, rotationChanges, rotationMenu,
                     rotationSpeedMin, rotationSpeedMax);
             }
 
@@ -348,14 +317,9 @@ namespace SpecialEffectsMod
             ShowCollisionControls(value == PageCollision && collisionToggle.IsActive);
         }
 
-        private static void Show(bool state, params MapperType[] controls)
-        {
-            foreach (MapperType control in controls) control.DisplayInMapper = state;
-        }
-
         private void ShowGeneralControls(bool state)
         {
-            Show(state, activate, toggleable, loop, speed, maxCount, lifeTime, gravity,
+            Controls.Show(state, activate, toggleable, loop, speed, maxCount, lifeTime, gravity,
                 playbackSpeed, physMenu, disableCollider, shaderMenu, textureMenu);
         }
 
@@ -368,41 +332,41 @@ namespace SpecialEffectsMod
         // min/max speed pair only applies to the by-speed mode.
         private void ShowColorChangeControls(bool state)
         {
-            Show(state, colorMenu, colorEnd, opacityEnd);
-            Show(state && colorMenu.Value == BySpeed, colorSpeedMin, colorSpeedMax);
+            Controls.Show(state, colorMenu, colorEnd, opacityEnd);
+            Controls.Show(state && colorMenu.Value == BySpeed, colorSpeedMin, colorSpeedMax);
         }
 
         private void ShowSizeChangeControls(bool state)
         {
-            Show(state, sizeMenu, sizeEnd);
-            Show(state && sizeMenu.Value == BySpeed, sizeSpeedMin, sizeSpeedMax);
+            Controls.Show(state, sizeMenu, sizeEnd);
+            Controls.Show(state && sizeMenu.Value == BySpeed, sizeSpeedMin, sizeSpeedMax);
         }
 
         private void ShowRotationChangeControls(bool state)
         {
-            Show(state, rotationMenu);
-            Show(state && rotationMenu.Value == BySpeed, rotationSpeedMin, rotationSpeedMax);
+            Controls.Show(state, rotationMenu);
+            Controls.Show(state && rotationMenu.Value == BySpeed, rotationSpeedMin, rotationSpeedMax);
         }
 
         private void ShowCollisionControls(bool state)
         {
-            Show(state, collisionRadius, collisionDampen, collisionBounce,
+            Controls.Show(state, collisionRadius, collisionDampen, collisionBounce,
                 collisionLifetimeLoss, collisionQuality);
         }
 
         private void ColorModeChanged(int value)
         {
-            Show(value == BySpeed, colorSpeedMin, colorSpeedMax);
+            Controls.Show(value == BySpeed, colorSpeedMin, colorSpeedMax);
         }
 
         private void SizeModeChanged(int value)
         {
-            Show(value == BySpeed, sizeSpeedMin, sizeSpeedMax);
+            Controls.Show(value == BySpeed, sizeSpeedMin, sizeSpeedMax);
         }
 
         private void RotationModeChanged(int value)
         {
-            Show(value == BySpeed, rotationSpeedMin, rotationSpeedMax);
+            Controls.Show(value == BySpeed, rotationSpeedMin, rotationSpeedMax);
         }
 
         public override void SimulateUpdateAlways()
@@ -414,8 +378,7 @@ namespace SpecialEffectsMod
                 else startFrames++;
             }
 
-            // The "Random" modes re-roll every frame, so unlike everything else
-            // they cannot be applied once on the startup frame.
+            // The "Random" modes re-roll every frame, unlike everything else.
             if (colorChanges.IsActive && colorMenu.Value == Randomly)
                 particleSys.startColor = gradient.Evaluate(Random.Range(0f, 1f));
             if (sizeChanges.IsActive && sizeMenu.Value == Randomly)
@@ -436,8 +399,8 @@ namespace SpecialEffectsMod
             else if (activate.IsReleased) particleSys.Stop();
         }
 
-        // The startup frame: the whole mapper is pushed into the particle system
-        // at once. Changing a slider mid-run does nothing until the next run.
+        // The startup frame: the whole mapper goes into the particle system at
+        // once, so a slider moved mid-run does nothing until the next run.
         private void Begin()
         {
             hasStarted = true;
@@ -527,8 +490,7 @@ namespace SpecialEffectsMod
             moduleRotationSpeed.range = new Vector2(rotationSpeedMin.Value, rotationSpeedMax.Value);
             if (rotationChanges.IsActive)
             {
-                // Random spin is re-rolled per frame above, but it still needs the
-                // over-lifetime module running to actually turn the particle.
+                // Random spin still needs the over-lifetime module to turn it.
                 moduleRotationLife.enabled =
                     rotationMenu.Value == OverLifetime || rotationMenu.Value == Randomly;
                 moduleRotationSpeed.enabled = rotationMenu.Value == BySpeed;
@@ -554,11 +516,9 @@ namespace SpecialEffectsMod
             joint.breakTorque = JointBreakForce;
         }
 
-        // The shimmer mirrors how the emitter throws its particles -- same rate,
-        // shape, speed and lifetime -- but nothing about how they are coloured or
-        // sized over their life, because it is not drawing a texture at all. It
-        // reads those off the emitter rather than off the mapper so the two cannot
-        // drift apart.
+        // The shimmer mirrors how the emitter throws its particles -- rate, shape,
+        // speed, lifetime -- but nothing about how they are coloured, since it is
+        // not drawing a texture. Read off the emitter so the two cannot drift.
         private void ConfigureHeatwave()
         {
             bool on = heatwave.IsActive && Heatwave.Available;
@@ -587,9 +547,8 @@ namespace SpecialEffectsMod
             shape.angle = emissionAngle.Value;
             shape.enabled = true;
 
-            // Every shimmer turns at its own rate, so the ripple rings never line
-            // up between two particles and the haze reads as moving air rather
-            // than as a row of identical stamps.
+            // Each shimmer turns at its own rate, so the ripple rings never line up
+            // between particles and the haze reads as moving air.
             ParticleSystem.RotationOverLifetimeModule spin = heatwaveSys.rotationOverLifetime;
             spin.z = new ParticleSystem.MinMaxCurve(-HeatwaveSpin, HeatwaveSpin);
             spin.enabled = true;
@@ -621,8 +580,7 @@ namespace SpecialEffectsMod
         }
 
         // Besiege keeps the behaviour alive between runs, so without this a second
-        // run would start with the startup work above already marked done, and
-        // with the emitter latched wherever the first run left it.
+        // run starts with the startup work already marked done.
         public override void OnSimulateStart()
         {
             hasStarted = false;

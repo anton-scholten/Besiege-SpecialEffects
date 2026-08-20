@@ -44,10 +44,8 @@ namespace SpecialEffectsMod
         // The prefab only has to have one; the event below configures it.
         public override void OnEntityPrefabCreation(int entityId, GameObject prefab)
         {
-            lightPiece = new GameObject();
-            lightPiece.transform.name = "LightPiece";
-            lightPiece.transform.parent = prefab.gameObject.transform;
-            sourceLight = GetOrAddLight(lightPiece);
+            lightPiece = Attach.Child(prefab.transform, "LightPiece");
+            sourceLight = Attach.Component<Light>(lightPiece);
             sourceLight.color = Color.Lerp(Color.red, Color.blue, 0.5f);
         }
 
@@ -56,25 +54,8 @@ namespace SpecialEffectsMod
         private void EntitySpotLight(LogicChain logic, IDictionary<string, EventProperty> properties)
         {
             GameObject entity = logic.Entity.GameObject;
-
-            lightPiece = null;
-            foreach (Transform child in entity.GetComponentsInChildren<Transform>())
-            {
-                if (child.name == "LightPiece")
-                {
-                    lightPiece = child.gameObject;
-                    break;
-                }
-            }
-
-            if (lightPiece == null)
-            {
-                lightPiece = new GameObject();
-                lightPiece.transform.name = "LightPiece";
-                lightPiece.transform.parent = entity.transform;
-            }
-
-            sourceLight = GetOrAddLight(lightPiece);
+            lightPiece = Attach.Child(entity.transform, "LightPiece");
+            sourceLight = Attach.Component<Light>(lightPiece);
             lightPiece.transform.localPosition = new Vector3(2f, 5f, 0f);
 
             switch (((EventProperty.Choice)properties["LightTypeInput"]).CurrentIndex)
@@ -100,13 +81,6 @@ namespace SpecialEffectsMod
                 case 2: sourceLight.renderMode = LightRenderMode.Auto; break;
                 default: sourceLight.renderMode = LightRenderMode.ForcePixel; break;
             }
-        }
-
-        private static Light GetOrAddLight(GameObject go)
-        {
-            Light light = go.GetComponent<Light>();
-            if (light == null) light = go.AddComponent<Light>();
-            return light;
         }
 
         // "Night true" / "Night false". The daytime ambient settings are captured

@@ -35,19 +35,14 @@ namespace SpecialEffectsMod
         private bool wasActive = true;
         private float localTimePattern;
 
-        // Pattern state: the sequence being stepped through, where in it we are,
-        // and the two colours the current step interpolates between.
+        private Strobe strobe = new Strobe();
         private string sequence;
-        private int sequenceIndex;
-        private bool advanceSequence = true;
-        private int sequenceCounter;
         private Color currentColor;
         private Color stepFrom;
         private Color stepTo;
 
-        // The material the block's own mesh is drawn with. Both the tint and the
-        // colour property are set on it, because which one bites depends on which
-        // shader the Shader menu picked.
+        // Both the tint and the colour property are set on it, because which one
+        // bites depends on which shader the Shader menu picked.
         private Material BlockMaterial
         {
             get { return VisualController.Block.MeshRenderer.material; }
@@ -86,16 +81,11 @@ namespace SpecialEffectsMod
             shapeMenu.ValueChanged += ShapeChanged;
         }
 
-        // The pattern controls are only meaningful with the pattern running, so
-        // they are hidden until it is switched on.
+        // The pattern controls only mean anything with the pattern running.
         private void ShowPatternControls(bool isActive)
         {
-            patternSequence.DisplayInMapper = isActive;
-            patternSpeed.DisplayInMapper = isActive;
-            timeDependentEffects.DisplayInMapper = isActive;
-            patternNumbers.DisplayInMapper = isActive;
-            patternAffectsTransparency.DisplayInMapper = isActive;
-            patternAffectsColor.DisplayInMapper = isActive;
+            Controls.Show(isActive, patternSequence, patternSpeed, timeDependentEffects,
+                patternNumbers, patternAffectsTransparency, patternAffectsColor);
         }
 
         private void ShapeChanged(int value)
@@ -154,41 +144,25 @@ namespace SpecialEffectsMod
             }
         }
 
-        // Walks the sequence one character every `Interval` seconds, interpolating
-        // between the current character's colour and the next one's in between.
+        // A step's two colours are read once, when the strobe rolls onto them.
         private void StepPattern()
         {
-            float framesPerStep = patternSpeed.Value * 100f / localTimePattern;
+            bool restart;
+            float blend;
+            if (!strobe.Step(sequence, patternSpeed.Value * 100f / localTimePattern,
+                    out restart, out blend)) return;
 
-            if (advanceSequence)
+            if (restart)
             {
-                advanceSequence = false;
-                if (sequenceIndex >= sequence.Length) sequenceIndex = 0;
-                stepFrom = ReadSequenceColor(sequence[sequenceIndex]);
+                stepFrom = ReadSequenceColor(strobe.From);
+                stepTo = ReadSequenceColor(strobe.To);
+            }
 
-                int next = sequenceIndex + 1;
-                if (next == sequence.Length) next = 0;
-                stepTo = ReadSequenceColor(sequence[next]);
-
-                ApplyPatternColor(stepFrom);
-                sequenceIndex++;
-            }
-            else if (sequenceCounter >= framesPerStep)
-            {
-                sequenceCounter = 0;
-                advanceSequence = true;
-            }
-            else
-            {
-                sequenceCounter++;
-                float t = sequenceCounter / framesPerStep;
-                ApplyPatternColor(Color.Lerp(stepFrom, stepTo, t));
-            }
+            ApplyPatternColor(Color.Lerp(stepFrom, stepTo, blend));
         }
 
-        // Which channels the pattern is allowed to drive are two separate toggles,
-        // so a pattern can blink the opacity while the colour slider still rules
-        // the hue, or the other way round.
+        // Two separate toggles, so a pattern can blink the opacity while the colour
+        // slider still rules the hue, or the other way round.
         private void ApplyPatternColor(Color col)
         {
             if (patternAffectsTransparency.IsActive) currentColor.a = col.a;
@@ -200,9 +174,8 @@ namespace SpecialEffectsMod
             }
         }
 
-        // One character of the sequence. '-' is a gap; a digit is a hue and an
-        // opacity, but only with "Numbers affect" on. Anything else -- and every
-        // digit without that toggle -- is the block's own colour and transparency.
+        // One character: '-' is a gap; a digit is a hue and an opacity, but only
+        // with "Numbers affect" on; anything else is the block's own colour.
         private Color ReadSequenceColor(char c)
         {
             if (c == '-') return new Color(0f, 0f, 0f, 0f);
@@ -231,8 +204,8 @@ namespace SpecialEffectsMod
             }
         }
 
-        // Held-down mode has to reassert the state every frame, because letting go
-        // of the key is what puts the pane back the way it started.
+        // Held-down mode reasserts the state every frame: letting go of the key is
+        // what puts the pane back the way it started.
         private void HoldVisibility()
         {
             if (toggleable.IsActive)
@@ -255,16 +228,13 @@ namespace SpecialEffectsMod
             else VisualController.SetInvisible();
         }
 
-        // Besiege keeps the behaviour alive between runs, so without this the
-        // second run would start from wherever the first one left off -- mid
-        // pattern, and with the startup work above already marked done.
+        // Besiege keeps the behaviour alive between runs, so without this a second
+        // run picks up mid-pattern with the startup work already marked done.
         public override void OnSimulateStart()
         {
             hasStarted = false;
             wasActive = true;
-            sequenceIndex = 0;
-            sequenceCounter = 0;
-            advanceSequence = true;
+            strobe.Reset();
         }
     }
 }

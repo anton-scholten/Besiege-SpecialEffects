@@ -9,20 +9,15 @@ namespace SpecialEffectsMod
         // saved before this change still finds its stored value.
         private const string SkinKey = "_CurrentSkin";
 
-        // The obvious lever -- BlockPrefab.SkinCanBeChanged -- is the wrong one.
-        // BlockPrefab.SetIcons also reads it, and only calls SetPrefabIcons() when
-        // it is true, so turning it off at prefab creation leaves every one of the
-        // mod's blocks showing a placeholder in the block menu.
+        // Not via BlockPrefab.SkinCanBeChanged: BlockPrefab.SetIcons reads that too
+        // and skips SetPrefabIcons() when it is false, which leaves every block
+        // showing a placeholder in the block menu.
         //
-        // So the control is hidden rather than prevented. BlockMapper.RefreshLists
-        // builds the block's MVisual and hands it to a GenericController, and that
-        // controller skips any MapperType whose DisplayInMapper is false, exactly
-        // as it does for the pages of controls the Spot Light hides.
-        //
-        // It has to exist before the mapper is first opened, or the game builds it
-        // there and shows it once. Building it here is the same call RefreshLists
-        // makes; from then on RefreshLists takes its reuse path, which refreshes
-        // the items and the label but leaves DisplayInMapper alone.
+        // The control is hidden instead -- GenericController.CreateContainers skips
+        // any MapperType with DisplayInMapper false. It has to exist before the
+        // mapper first opens or the game builds it there and shows it once, so this
+        // makes the same call RefreshLists would; RefreshLists then takes its reuse
+        // path, which leaves DisplayInMapper alone.
         public static void Hide(BlockBehaviour block)
         {
             if (block == null) return;

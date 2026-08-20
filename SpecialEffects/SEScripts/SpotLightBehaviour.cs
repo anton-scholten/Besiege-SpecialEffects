@@ -96,12 +96,9 @@ namespace SpecialEffectsMod
         private float currentConeAngle;
         private Color currentColor;
 
-        // Pattern state: where in the sequence we are, and the two steps being
-        // interpolated between.
+        // The two steps being blended between.
+        private Strobe strobe = new Strobe();
         private string sequence;
-        private int sequenceIndex;
-        private bool advanceSequence = true;
-        private int sequenceCounter;
         private float intensityFrom, intensityTo;
         private float angleFrom, angleTo;
         private Color colorFrom, colorTo;
@@ -114,8 +111,7 @@ namespace SpecialEffectsMod
         public override void SafeAwake()
         {
             Skins.Hide(BlockBehaviour);
-            sourceLight = gameObject.GetComponent<Light>();
-            if (sourceLight == null) sourceLight = gameObject.AddComponent<Light>();
+            sourceLight = Attach.Component<Light>(gameObject);
             sourceLight.enabled = false;
 
             CreateLens();
@@ -138,11 +134,9 @@ namespace SpecialEffectsMod
             colorMax = AddColourSlider("Max", "ColorMaxKey", Color.magenta, false);
             colorToggle = AddToggle("Auto Color", "ColorModeKey", false);
 
-            // The mapper groups controls by kind and orders each group by the
-            // order they were added in, so Activate is registered before the
-            // toggles it reveals: that keeps it at the top of the toggles --
-            // directly under the page menu -- instead of the strobe controls
-            // appearing above it and pushing it down the moment it is switched on.
+            // The mapper orders each kind of control by when it was added, so
+            // Activate goes in before the toggles it reveals -- otherwise they
+            // appear above it and push it down the panel when it is switched on.
             patternToggle = AddToggle("Activate", "PatternModeKey", false);
             patternSequence = AddText("Sequence", "SequenceKey", "-123--4-9");
             patternSpeed = AddSlider("Interval", "PatternSpeedKey", 0.25f, 0f, 5f);
@@ -186,33 +180,14 @@ namespace SpecialEffectsMod
             brightnessMax.ValueChanged += LensBrightnessChanged;
         }
 
-        // The glowing disc in front of the lamp is a child object of its own, so
-        // it can be shaped and lit independently of the block's mesh. Reused if it
-        // is already there, which it is on a reload.
+        // The glowing disc in front of the lamp is a child of its own so it can be
+        // shaped and lit independently of the block's mesh.
         private void CreateLens()
         {
-            foreach (Transform child in sourceLight.GetComponentsInChildren<Transform>())
-            {
-                if (child.name == "LightLens")
-                {
-                    lightLens = child.gameObject;
-                    break;
-                }
-            }
-
-            if (lightLens == null)
-            {
-                lightLens = new GameObject();
-                lightLens.transform.name = "LightLens";
-                lightLens.transform.parent = sourceLight.transform;
-            }
-
-            meshRenderLens = lightLens.GetComponent<MeshRenderer>();
-            if (meshRenderLens == null) meshRenderLens = lightLens.AddComponent<MeshRenderer>();
+            lightLens = Attach.Child(sourceLight.transform, "LightLens");
+            meshRenderLens = Attach.Component<MeshRenderer>(lightLens);
             meshRenderLens.material.shader = GameMaterials.Shaders.Particles.AlphaBlended;
-
-            meshFilterLens = lightLens.GetComponent<MeshFilter>();
-            if (meshFilterLens == null) meshFilterLens = lightLens.AddComponent<MeshFilter>();
+            meshFilterLens = Attach.Component<MeshFilter>(lightLens);
         }
 
         // Only one page of the options menu is shown at a time; everything else is
@@ -242,33 +217,22 @@ namespace SpecialEffectsMod
         private static void ShowGroup(bool onPage, MToggle mode, MapperType value,
             MapperType speed, MapperType min, MapperType max)
         {
-            mode.DisplayInMapper = onPage;
-            value.DisplayInMapper = onPage;
-            if (onPage) return;
-            speed.DisplayInMapper = false;
-            min.DisplayInMapper = false;
-            max.DisplayInMapper = false;
+            Controls.Show(onPage, mode, value);
+            if (!onPage) Controls.Show(false, speed, min, max);
         }
 
         // "Auto" swaps the fixed value for a min/max/speed ping-pong.
         private static void ShowAutoControls(bool isActive, MapperType value,
             MapperType speed, MapperType min, MapperType max)
         {
-            value.DisplayInMapper = !isActive;
-            speed.DisplayInMapper = isActive;
-            min.DisplayInMapper = isActive;
-            max.DisplayInMapper = isActive;
+            Controls.Show(!isActive, value);
+            Controls.Show(isActive, speed, min, max);
         }
 
         private void ShowGeneralControls(bool state)
         {
-            activate.DisplayInMapper = state;
-            lightTypes.DisplayInMapper = state;
-            range.DisplayInMapper = state;
-            toggleMode.DisplayInMapper = state;
-            illuminationType.DisplayInMapper = state;
-            timeDependentEffects.DisplayInMapper = state;
-            textureMenu.DisplayInMapper = state;
+            Controls.Show(state, activate, lightTypes, range, toggleMode,
+                illuminationType, timeDependentEffects, textureMenu);
         }
 
         private void ShowBrightnessControls(bool isActive)
@@ -288,12 +252,8 @@ namespace SpecialEffectsMod
 
         private void ShowPatternControls(bool isActive)
         {
-            patternSequence.DisplayInMapper = isActive;
-            patternSpeed.DisplayInMapper = isActive;
-            patternNumbers.DisplayInMapper = isActive;
-            patternAffectsBrightness.DisplayInMapper = isActive;
-            patternAffectsConeAngle.DisplayInMapper = isActive;
-            patternAffectsColor.DisplayInMapper = isActive;
+            Controls.Show(isActive, patternSequence, patternSpeed, patternNumbers,
+                patternAffectsBrightness, patternAffectsConeAngle, patternAffectsColor);
         }
 
         // In the build menu the lens is restyled as soon as the menu changes.
@@ -485,43 +445,27 @@ namespace SpecialEffectsMod
             return Mathf.Lerp(min, max, Mathf.PingPong(localTimeEffects * speed, 1f));
         }
 
-        // Walks the sequence one character every `Interval` seconds, interpolating
-        // between the current character's values and the next one's in between.
+        // A step's values are read once, when the strobe rolls onto them.
         private void StepPattern()
         {
-            float framesPerStep = patternSpeed.Value * 100f / localTimePattern;
+            bool restart;
+            float blend;
+            if (!strobe.Step(sequence, patternSpeed.Value * 100f / localTimePattern,
+                    out restart, out blend)) return;
 
-            if (advanceSequence)
+            if (restart)
             {
-                advanceSequence = false;
-                if (sequenceIndex >= sequence.Length) sequenceIndex = 0;
-                ReadSequenceStep(sequence[sequenceIndex], out intensityFrom, out angleFrom, out colorFrom);
+                ReadSequenceStep(strobe.From, out intensityFrom, out angleFrom, out colorFrom);
+                ReadSequenceStep(strobe.To, out intensityTo, out angleTo, out colorTo);
+            }
 
-                int next = sequenceIndex + 1;
-                if (next == sequence.Length) next = 0;
-                ReadSequenceStep(sequence[next], out intensityTo, out angleTo, out colorTo);
-
-                ApplyPattern(intensityFrom, angleFrom, colorFrom);
-                sequenceIndex++;
-            }
-            else if (sequenceCounter >= framesPerStep)
-            {
-                sequenceCounter = 0;
-                advanceSequence = true;
-            }
-            else
-            {
-                sequenceCounter++;
-                float t = sequenceCounter / framesPerStep;
-                ApplyPattern(Mathf.Lerp(intensityFrom, intensityTo, t),
-                             Mathf.Lerp(angleFrom, angleTo, t),
-                             Color.Lerp(colorFrom, colorTo, t));
-            }
+            ApplyPattern(Mathf.Lerp(intensityFrom, intensityTo, blend),
+                         Mathf.Lerp(angleFrom, angleTo, blend),
+                         Color.Lerp(colorFrom, colorTo, blend));
         }
 
-        // Which of the three the pattern is allowed to drive are separate toggles,
-        // so a sequence can blink the lamp while the colour slider still rules
-        // the hue, or the other way round.
+        // Separate toggles, so a sequence can blink the lamp while the colour
+        // slider still rules the hue, or the other way round.
         private void ApplyPattern(float intensity, float angle, Color color)
         {
             if (patternAffectsBrightness.IsActive) sourceLight.intensity = intensity;
@@ -529,9 +473,9 @@ namespace SpecialEffectsMod
             if (patternAffectsColor.IsActive) sourceLight.color = color;
         }
 
-        // One character of the sequence. '-' is a gap -- as near off as the light
-        // gets without switching it off. A digit is a brightness, a cone angle and
-        // a hue, but only with "Numbers affect" on. Anything else holds.
+        // One character: '-' is a gap, as near off as the lamp gets without going
+        // out; a digit is a brightness, cone angle and hue, but only with "Numbers
+        // affect" on; anything else holds.
         private void ReadSequenceStep(char c, out float intensity, out float angle, out Color color)
         {
             if (c == '-')
@@ -556,8 +500,8 @@ namespace SpecialEffectsMod
             color = currentColor;
         }
 
-        // The lens tracks whatever the light ended up at this frame, and is hidden
-        // outright when the lamp is off or too dark to be worth drawing.
+        // The lens tracks whatever the light ended up at, and is hidden outright
+        // when the lamp is off or too dark to be worth drawing.
         private void UpdateLens()
         {
             if (textureMenu.Value == LensHidden)
@@ -574,16 +518,13 @@ namespace SpecialEffectsMod
                 && sourceLight.enabled);
         }
 
-        // Besiege keeps the behaviour alive between runs, so without this the
-        // second run would start from wherever the first one left off -- mid
-        // pattern, and with the startup work above already marked done.
+        // Besiege keeps the behaviour alive between runs, so without this a second
+        // run picks up mid-pattern with the startup work already marked done.
         public override void OnSimulateStart()
         {
             hasStarted = false;
             startFrames = 0;
-            sequenceIndex = 0;
-            sequenceCounter = 0;
-            advanceSequence = true;
+            strobe.Reset();
         }
     }
 }
