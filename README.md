@@ -153,11 +153,45 @@ The mod adds two, for the level's lighting:
 `ambientMode` as `Skybox`, `Trilight` or `Flat`; and `up` on its own to apply the
 change to everything already lit.
 
-## Notes
+## Spot Light Entity
 
-The mod also declares a **Spot Light Entity** for level editors. It is a stub —
-the 2018 description said so and it is still true — and finishing it is a job
-someone has yet to do.
+![The Spot Light object in a level, with its settings open](Promo_1.jpg)
+
+The Spot Light is also a level editor object, under **Virtual** in the object
+list. It lights as soon as you place it, and its settings are on the object's own
+panel — the same sliders and colour picker the blocks use.
+
+| Setting | What it does |
+| --- | --- |
+| Spot / Directional / Point | Light type |
+| Pixel / Vertex / Auto | Illumination quality |
+| Brightness / Angle / Range | How bright, how wide, how far |
+| Color | Colour of the light, and of the lens |
+| Lens | Whether the glowing disc in the housing is drawn |
+| Housing | Whether the lamp itself is drawn, leaving only the beam |
+
+A level can also change one while it runs, with Besiege's own **Modify Variable**
+event. Its *scope of change* picker aims at a single object, so a trigger
+anywhere in the level can drive one lamp and leave the rest alone.
+
+| Variable | Sets |
+| --- | --- |
+| `brightness` | Intensity, `0` to `10` |
+| `red` `green` `blue` | One colour channel each, `0`–`1`, or `0`–`255` if any of the three is above `1` |
+| `angle` | Cone angle, in degrees |
+| `range` | How far the light reaches |
+| `type` | `0` spot, `1` directional, `2` point |
+| `illumination` | `0` pixel, `1` vertex, `2` auto |
+| `lens` | `0` hides the lens, above `0` shows it |
+| `housing` | `0` hides the housing, above `0` shows it |
+
+Set a variable **negative** to hand that setting back to its slider. Nothing in
+Besiege can delete a variable once it is set, so that is how a level gives a lamp
+back after taking it over. Variables are numbers — there are no text variables,
+which is why a colour takes three — and `Modify Variable` can add and subtract as
+well as set, so repeated events make a fade.
+
+## Notes
 
 The C# for this mod was lost and has been recovered from the shipped 2018
 assembly. [docs/RECOVERY.md](docs/RECOVERY.md) is the record of how, and how far

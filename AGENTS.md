@@ -215,6 +215,14 @@ number, and the prefab is not registered there yet in any case:
 step. `BlockPrefabCreator.SetupBehaviour` has already filled in
 `BlockBehaviour.Prefab` by then.
 
+**There are no hover tips on mapper controls, and that was tried properly.** The
+variable reference lives in the README instead. `SaveableDataHolder`'s
+`AddToggle(name, key, tooltipText, default)` discards the tooltip argument, the
+game's `Tooltip` component is prefab-driven behind a `protected Init`, and a
+hand-built one has to find each control's label, project it to screen space
+through the right camera, and draw its own panel — several days of screenshot
+round-trips for a line of text that a README carries better.
+
 **There is no modded event any more, and adding one back is a step backwards.**
 The mod used to ship a `SpotLight` event, and it was removed because everything it
 could do is done better elsewhere. Two facts drove that, and both are worth

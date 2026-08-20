@@ -102,6 +102,7 @@ namespace SpecialEffectsMod
             range = holder.AddSlider("Range", "EntityRangeKey", 30f, 0f, 1000f);
             showLens = holder.AddToggle("Lens", "EntityLensKey", true);
             showHousing = holder.AddToggle("Housing", "EntityHousingKey", true);
+
         }
 
         // Aimed and applied every frame: the housing mesh arrives asynchronously,

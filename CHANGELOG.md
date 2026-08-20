@@ -24,6 +24,8 @@ with that version load and behave as they did, apart from the fixes.
 
 - The object's settings no longer reset to their defaults when a level starts.
 
+- The README documents the level variables, with pictures.
+
 **Removed**
 
 - The mod's own `SpotLight` event. A modded event gets no slider and no colour
