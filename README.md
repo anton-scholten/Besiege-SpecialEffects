@@ -80,11 +80,11 @@ lamp redoes them either way.
 Shafts are expensive — each lit one costs about an extra render of the scene
 every frame. One looks superb, a dozen will not run.
 
-![Coloured light trails from a machine flying past](Previous_stuff/Pics/Medusa3.jpg)
+![A wall of magenta and green glass spheres](Previous_stuff/Pics/Pic4.jpg)
 
 ## Glass Block
 
-![A wall of magenta and green glass spheres](Previous_stuff/Pics/Pic4.jpg)
+![Coloured light trails from a machine flying past](Previous_stuff/Pics/Medusa3.jpg)
 
 A coloured, translucent pane — or a sphere, a poly sphere, or a torus.
 
