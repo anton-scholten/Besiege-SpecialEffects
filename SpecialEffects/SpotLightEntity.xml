@@ -12,7 +12,7 @@
 
 	<Texture name="SpotLight_texture" />
 	
-	<Icon name="SpecialEffects_icon" />
+	<Icon name="SpotLight_icon" />
 	
 	<Offset x="0.0" y="0.5" z="0.0" />
 	
@@ -38,9 +38,5 @@
 		<Trigger>Destroy</Trigger>
 		<Trigger>Ignite</Trigger>
 		<Trigger>Variable</Trigger>
-		<ModdedTrigger>
-			<ModID>876e14a5-e25d-43a9-915f-1eb61b036822</ModID>
-			<LocalID>1</LocalID>
-		</ModdedTrigger>
 	</Triggers>
 </Entity>

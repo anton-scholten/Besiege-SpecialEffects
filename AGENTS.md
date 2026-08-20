@@ -13,12 +13,12 @@ whole of what gets uploaded to the Workshop. Everything beside it is not part of
 the mod.
 
 ```
-SpecialEffects/Mod.xml                       manifest: assembly, blocks, entity, event, resources
+SpecialEffects/Mod.xml                       manifest: assembly, blocks, entity, resources
 SpecialEffects/SpotLight.xml                 the four blocks: mesh, colliders, module
 SpecialEffects/GlassBlock.xml
 SpecialEffects/ParticleEmitter.xml
 SpecialEffects/TextBlock.xml
-SpecialEffects/SpotLightEntity.xml           the level entity (a stub; see below)
+SpecialEffects/SpotLightEntity.xml           the level editor object: mesh, colliders, triggers
 SpecialEffects/SpecialEffectsAssembly.dll    built by tools/build.sh (checked in, the game loads it)
 SpecialEffects/Resources/                    meshes, textures, the font asset bundle
 SpecialEffects/SEScripts/*.cs                mod source; not read by the game
@@ -215,6 +215,70 @@ number, and the prefab is not registered there yet in any case:
 step. `BlockPrefabCreator.SetupBehaviour` has already filled in
 `BlockBehaviour.Prefab` by then.
 
+**There is no modded event any more, and adding one back is a step backwards.**
+The mod used to ship a `SpotLight` event, and it was removed because everything it
+could do is done better elsewhere. Two facts drove that, and both are worth
+knowing before anyone reaches for `ModEvents.RegisterCallback` again:
+
+- **A modded event cannot have a slider or a colour picker.** Its `<Properties>`
+  array accepts exactly `Choice`, `Icon`, `NumberInput`, `Picker`, `Row`,
+  `TeamButton`, `Text`, `TextInput` and `Toggle` — and `Picker` picks *entities*,
+  not colours. So a brightness was a typed number and a colour was a typed hex
+  string. The game has no better widget to give.
+- **A modded event only reaches the entity whose logic chain it sits in.** The
+  game's own Modify Variable event has an entity picker, so it can reach one named
+  lamp from a trigger anywhere in the level.
+
+The SETTINGS tab plus level variables cover the same ground with the game's own
+sliders and the game's own picker.
+
+**The entity's SETTINGS tab is a mapper like a block's.**
+`LevelEntity.EntityBehaviour` is a `GenericEntity`, which is a
+`SaveableDataHolder` — the same base a `BlockBehaviour` has — so it takes
+`AddSlider`, `AddColourSlider`, `AddMenu` and `AddToggle`. Its keys are saved into
+the level, so the *Do not rename a mapper key* rule covers them too.
+
+Getting at it needs a trick: `ModEntryPoint` has prefab callbacks and nothing
+else, and stock entities add their controls from a `GenericEntity.Init` override
+a mod cannot supply. So `Mod.OnEntityPrefabCreation` attaches
+`SpotLightEntityBehaviour` to the *prefab*, and because
+`LevelEditor.InstantiatePrefab` clones that GameObject for every placed object,
+each entity ends up with its own copy — whose `Start` is the per-instance hook.
+The lens and the light are built on the prefab for the same reason.
+
+**`Mod.OnEntityPrefabCreation` builds the light, the lens and the behaviour on
+the prefab**, so dropping the object into a level lights something with no wiring
+at all. It has the same id trap as its block counterpart: the `entityId` is the
+mod-local one, the `<ID>` in `SpotLightEntity.xml`.
+
+**Do not write the beam's rotation down as a constant.** It was tried twice, from
+the `<Mesh><Rotation>` in `SpotLightEntity.xml`, and was wrong both times: the
+angle that reaches the housing is not that number alone. `SpotLightEntity.
+AimAtBarrel` copies the rotation off the `Vis` transform instead — whatever the
+XML, the mod loader and the editor between them did to the housing ends up there
+— and does it every frame, because the mesh loads asynchronously and the object
+can be turned after it lands. The beam and the lens both hang off one `LightHead`
+child so they cannot drift apart from each other either.
+
+**The entity answers to ten level variables**: `brightness`, `angle`, `range`,
+`red`, `green`, `blue`, `type`, `illumination`, `lens` and `housing`. A level sets
+them with the game's own Modify Variable event. Variables are `float` throughout
+Besiege (`Dictionary<string, float>`, `SetVariable(..., Single)`) — there are no
+string variables, which is why a colour takes three and the two menus are driven
+by their index. The colour channels read 0-1, or 0-255 if any of the three is
+above 1.
+
+The entity's controls are added in **`Awake`, not `Start`**: `LevelXMLLoader`
+instantiates the object and calls `LoadEntityData` in the same breath, while
+`Start` does not run until the end of the frame — controls added that late are
+not there for the saved values to land in, and every setting reads back as its
+default on level start.
+
+**A negative value means "no opinion"** and hands that one setting back to the
+SETTINGS tab. That is not a nicety: nothing in Besiege can delete a variable once
+it is set, so without the sentinel a level could take a lamp over and never give
+it back.
+
 **The mapper groups controls by kind, not by the order they were added.**
 `BlockMapper.ShowMapper` lays out one controller per control type, top to bottom:
 non-footer menus, keys, toggles, values, sliders, colour sliders, emulated keys,
@@ -294,13 +358,6 @@ still lands on the shader's own default strength.
 
 Left alone deliberately:
 
-- **The spot light entity is still a stub.** `Mod.xml`'s own description says so.
-  Its event reads a `HideVisuals` toggle and does nothing with it — that much
-  dead code is gone — and `OnEntityPrefabCreation` gives every instance a light
-  lerped halfway between red and blue, which the event then overwrites. Finishing
-  it is a feature, not a tidy-up.
-- **The commented-out `<Triggers>` block in `Mod.xml`.** It is the other half of
-  the same unfinished entity work.
 - **`Cone.obj`, `Lens.obj` and `SquareCookie.png` are declared under an
   `<!-- Unused -->` comment in `Mod.xml`.** `Lens` is not unused — it is the spot
   light's lens mesh — and the comment is wrong about it. The other two really are

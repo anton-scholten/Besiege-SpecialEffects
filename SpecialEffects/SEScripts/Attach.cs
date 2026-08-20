@@ -7,18 +7,25 @@ namespace SpecialEffectsMod
     // Besiege reuses a block's GameObject across reloads.
     public static class Attach
     {
-        // The named child, created if it is not there yet. `created` is for the
-        // callers whose placement is not idempotent and must run once only.
-        //
-        // Inactive children count: a lens or a shimmer that was switched off would
-        // otherwise be missed and a second one built beside it every reload.
-        public static GameObject Child(Transform parent, string name, out bool created)
+        // The named descendant, or null. Inactive ones count: a lens or a shimmer
+        // that was switched off would otherwise be missed, and a second one built
+        // beside it on the next reload.
+        public static Transform Find(Transform parent, string name)
         {
             foreach (Transform child in parent.GetComponentsInChildren<Transform>(true))
+                if (child.name == name) return child;
+            return null;
+        }
+
+        // The named child, created if it is not there yet. `created` is for the
+        // callers whose placement is not idempotent and must run once only.
+        public static GameObject Child(Transform parent, string name, out bool created)
+        {
+            Transform found = Find(parent, name);
+            if (found != null)
             {
-                if (child.name != name) continue;
                 created = false;
-                return child.gameObject;
+                return found.gameObject;
             }
 
             GameObject made = new GameObject();

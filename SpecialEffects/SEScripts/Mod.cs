@@ -1,24 +1,16 @@
-using System.Collections.Generic;
 using Modding;
-using Modding.Levels;
 using Modding.Modules;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 namespace SpecialEffectsMod
 {
-    // Mod entry point: registers the four block modules, the spot light entity's
-    // event, and the two console commands that drive the level's lighting.
+    // Mod entry point: registers the four block modules, builds the Spot Light
+    // entity's prefab, and adds the two console commands for the level's lighting.
     public class Mod : ModEntryPoint
     {
-        // The <Event><ID>1</ID> in Mod.xml -- the spot light entity's only event.
-        private const int SpotLightEventId = 1;
-
-        // Brightness comes in as a percentage; Unity's intensity is roughly 0-8.
-        private const float BrightnessToIntensity = 12.5f;
-
-        private Light sourceLight;
-        private GameObject lightPiece;
+        // The <ID> in SpotLightEntity.xml.
+        private const int SpotLightEntityId = 1;
 
         private bool night;
         private Color dayAmbientColor;
@@ -32,55 +24,22 @@ namespace SpecialEffectsMod
             CustomModules.AddBlockModule<GlassBlock, GlassBlockBehaviour>("GlassBlock", false);
             CustomModules.AddBlockModule<TextBlock, TextBlockBehaviour>("TextBlock", false);
 
-            ModEvents.RegisterCallback(SpotLightEventId, EntitySpotLight);
-
             ModConsole.RegisterCommand("Night", NightModeHandler,
                 "Night + true (Night) or false (Day)");
             ModConsole.RegisterCommand("Custom", CustomHandler,
                 "Custom + Various ");
         }
 
-        // Every spot light entity gets a child object carrying the actual Light.
-        // The prefab only has to have one; the event below configures it.
+        // The editor clones this prefab for every placed object, so the light, the
+        // lens and the behaviour that drives them are built once here and every
+        // entity gets its own. The behaviour is also the only per-instance hook a
+        // mod has for an entity -- see SpotLightEntityBehaviour.
         public override void OnEntityPrefabCreation(int entityId, GameObject prefab)
         {
-            lightPiece = Attach.Child(prefab.transform, "LightPiece");
-            sourceLight = Attach.Component<Light>(lightPiece);
-            sourceLight.color = Color.Lerp(Color.red, Color.blue, 0.5f);
-        }
-
-        // The spot light entity's event, fired from a level's logic chain: reads
-        // the properties the level author set in Mod.xml and applies them.
-        private void EntitySpotLight(LogicChain logic, IDictionary<string, EventProperty> properties)
-        {
-            GameObject entity = logic.Entity.GameObject;
-            lightPiece = Attach.Child(entity.transform, "LightPiece");
-            sourceLight = Attach.Component<Light>(lightPiece);
-            lightPiece.transform.localPosition = new Vector3(2f, 5f, 0f);
-
-            switch (((EventProperty.Choice)properties["LightTypeInput"]).CurrentIndex)
-            {
-                case 1: sourceLight.type = LightType.Directional; break;
-                case 2: sourceLight.type = LightType.Point; break;
-                default: sourceLight.type = LightType.Spot; break;
-            }
-
-            sourceLight.intensity =
-                ((EventProperty.NumberInput)properties["BrightnessInput"]).Value / BrightnessToIntensity;
-
-            ColorUtility.TryParseHtmlString(
-                ((EventProperty.TextInput)properties["ColorInput"]).Text, out parsedColor);
-            sourceLight.color = parsedColor;
-
-            sourceLight.spotAngle = ((EventProperty.NumberInput)properties["AngleInput"]).Value;
-            sourceLight.range = ((EventProperty.NumberInput)properties["RangeInput"]).Value;
-
-            switch (((EventProperty.Choice)properties["IlluminationTypeInput"]).CurrentIndex)
-            {
-                case 1: sourceLight.renderMode = LightRenderMode.ForceVertex; break;
-                case 2: sourceLight.renderMode = LightRenderMode.Auto; break;
-                default: sourceLight.renderMode = LightRenderMode.ForcePixel; break;
-            }
+            if (entityId != SpotLightEntityId) return;
+            SpotLightEntity.Beam(prefab);
+            SpotLightEntity.Lens(prefab);
+            Attach.Component<SpotLightEntityBehaviour>(prefab);
         }
 
         // "Night true" / "Night false". The daytime ambient settings are captured

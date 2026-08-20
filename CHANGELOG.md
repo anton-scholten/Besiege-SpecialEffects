@@ -5,8 +5,37 @@
 Everything below is on top of 0.3.2, the last released version. Machines built
 with that version load and behave as they did, apart from the fixes.
 
+**Added**
+
+- The **Spot Light** is now a finished level editor object, under Virtual. It
+  lights as soon as it is placed, and its settings — type, brightness, colour,
+  cone angle, range, illumination and the lens — are proper Besiege sliders and
+  colour sliders on the object's SETTINGS tab. It carries the block's glowing
+  lens, tinted to match. The `SpotLight` event still overrides all of it from a
+  level's logic. Previously it was a stub: an unconfigured purple light floating
+  beside the housing, shining out of its side, with no way to change it.
+- The object and its event use the Spot Light block's icon rather than the mod's
+  promo art.
+- A level can drive a placed Spot Light with the game's own Modify Variable
+  event, which has an entity picker, so one lamp can be changed without touching
+  the others: `brightness`, `angle`, `range`, `red`, `green`, `blue`, `type`,
+  `illumination`, `lens` and `housing`. Setting one negative gives that setting
+  back to the object's own slider.
+
+- The object's settings no longer reset to their defaults when a level starts.
+
+**Removed**
+
+- The mod's own `SpotLight` event. A modded event gets no slider and no colour
+  picker from the game — brightness was a typed number and colour a typed hex
+  string — and it could only reach the entity whose logic chain it sat in. The
+  SETTINGS tab and the variables above do all of it with the game's own sliders
+  and its own entity picker.
+
 **Fixed**
 
+- The entity's **Hide Visuals** event option did nothing. It hides the housing
+  and leaves the beam now.
 - Four particle textures — Hex, Light1, Light2 and Fire — never loaded on Linux.
   Their paths in `Mod.xml` were capitalised differently from the files on disk,
   which only matters on a case-sensitive filesystem.

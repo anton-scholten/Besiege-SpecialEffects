@@ -4,7 +4,7 @@
 	<Version>0.4.0</Version>
 	
 	<Description>
-	Adds: SpotLight, Glass, ParticleEmitter, and Text blocks. Spot light entity is not fully implemented, just testing things. Other blocks will come in the future to add special effects in game.
+	Adds SpotLight, Glass, ParticleEmitter and Text blocks, plus a Spot Light object for the level editor.
 	</Description>
 	
 	<Icon name="SpecialEffects_icon" />
@@ -25,34 +25,6 @@
 	<Entities>
 		<Entity path="SpotLightEntity.xml" />
 	</Entities>
-	
-	<Events>
-		<Event>
-			<Name>SpotLight</Name>
-			<ID>1</ID>
-			<Icon name="SpecialEffects_icon" />
-			<Properties>
-				<Choice name="LightTypeInput" default="0">
-					<Option index="0">Spot</Option>
-					<Option index="1">Directional</Option>
-					<Option index="2">Point</Option>
-				</Choice>
-				<NumberInput name="BrightnessInput" title="Brightness" default="50" suffix="%" maxValue="100" minValue="0" />
-				<TextInput name="ColorInput" title="Color" default="#FF0000" />
-				<NumberInput name="AngleInput" title="Angle" suffix="°" default="65" negativeNumbers="false" maxValue="180" minValue="0" />
-				<NumberInput name="RangeInput" title="Range" suffix="m" default="30" negativeNumbers="false" maxValue="1000" minValue="0" />
-				<Choice name="IlluminationTypeInput" default="0">
-					<Option index="0">Pixel</Option>
-					<Option index="1">Vertex</Option>
-					<Option index="2">Auto</Option>
-				</Choice>
-				<Toggle name="HideVisuals" default="false">
-					<Icon name="SpecialEffects_icon" />
-				</Toggle>
-
-			</Properties>
-		</Event>
-	</Events>
 	
 <!--	
 	<Triggers>
@@ -79,6 +51,7 @@
 		<!-- Blocks -->
 		<Mesh name="SpotLight_mesh" path="Blocks\SpotLight_mesh.obj" />
 		<Texture name="SpotLight_texture" path="Blocks\SpotLight_texture.png" />
+		<Texture name="SpotLight_icon" path="Blocks\SpotLight_icon.png" />
 		
 		<Mesh name="ParticleEmitter_mesh" path="Blocks\Particle_Emitter.obj" />
 		<Texture name="ParticleEmitter_texture" path="Blocks\Particle_Emitter_tex.png" />
