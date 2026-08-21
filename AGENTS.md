@@ -67,6 +67,34 @@ Note the keys are not tidy and must stay untidy: `"Activate"`, `"Range"` and
 `ColorKey` does, and the Spot Light's strobe page uses
 `"PatternAffectsConeAnglesKey"` — plural, unlike its two neighbours.
 
+**Variables reach a block through its keys and nowhere else.** `MKey` carries the
+whole feature — `Emulating`, `EmulationPressed`, `EmulationHeld(includePressed)`,
+`EmulationReleased` — while `MSlider`, `MToggle`, `MMenu` and `MapperType` have
+nothing variable-related on them at all. `KeyReader` is the only place that
+should touch any of it.
+
+**An emulated edge is only true inside `KeyEmulationUpdate`.**
+`MKey.CheckEmulation` compares `Emulating` against a snapshot it advances the
+first time it is called in a given `Time.fixedTime`, so a second call inside the
+same fixed step reports the same rising edge again. Read one from an ordinary
+`Update` and every variable press lands as two or three, which silently breaks
+anything toggling. `Machine.FixedUpdate` runs `EmulationUpdateBlock` — and
+through it `ModBlockBehaviour.KeyEmulationUpdate` — once per emulation tick, and
+`InternalModding.Blocks.BlockPrefabCreator.SetupBehaviour` sets
+`BlockPrefab.RegisterEmulationUpdate = true` for every modded block, so the hook
+is already live and needs no opting in. Take the edges there, latch them, and let
+the frame update consume each once: that is what `SpinningModuleBehaviour` and
+`SpewingModuleBehaviour` do. `ShootingModuleBehaviour` does *not* — it reads
+`IsPressed || EmulationPressed()` straight from `SimulateUpdateAlways` — and has
+the double-fire bug to go with it, so it is not the one to copy.
+
+Note the emulation pass only runs at all when the machine holds a block whose
+`Prefab.EmulatesAnyKeys` is set (`Machine.HasEmulationBlocks`). With nothing
+emulating there are no edges to miss, so keyboard-only play is unaffected.
+
+**`MKey.IsDown` is deprecated and says so, loudly.** It forwards to `IsHeld` after
+a `Debug.LogWarning`, so a per-frame caller floods the console. Use `IsHeld`.
+
 **Light shafts are expensive and uncapped.** One enabled `LightShafts` costs a
 full extra scene render per frame -- `Camera.RenderWithShader` into a 1024²
 shadowmap -- plus six 512² render textures and about five fullscreen passes. That

@@ -59,7 +59,7 @@ namespace SpecialEffectsMod
 
         private MMenu settingsMenu;
 
-        private MKey activate;
+        private KeyReader activate;
         private MToggle toggleable;
         private MToggle loop;
         private MSlider maxCount;
@@ -128,7 +128,7 @@ namespace SpecialEffectsMod
             settingsMenu = AddMenu("SettingsMenuKey", 0, new List<string>
                 { "General", "Emission", "Dampen", "Color", "Size", "Rotation", "Collision" }, false);
 
-            activate = AddKey("Activate", "Activate", KeyCode.K);
+            activate = new KeyReader(AddKey("Activate", "Activate", KeyCode.K));
             toggleable = AddToggle("Toggle", "ToggleKey", false);
             loop = AddToggle("Loop", "LoopKey", true);
             speed = AddSliderUnclamped("Speed", "ParticleSpeedKey", 5f, 0f, 10f);
@@ -319,7 +319,7 @@ namespace SpecialEffectsMod
 
         private void ShowGeneralControls(bool state)
         {
-            Controls.Show(state, activate, toggleable, loop, speed, maxCount, lifeTime, gravity,
+            Controls.Show(state, activate.Mapper, toggleable, loop, speed, maxCount, lifeTime, gravity,
                 playbackSpeed, physMenu, disableCollider, shaderMenu, textureMenu);
         }
 
@@ -386,17 +386,18 @@ namespace SpecialEffectsMod
             if (rotationChanges.IsActive && rotationMenu.Value == Randomly)
                 particleSys.startRotation = Random.Range(rotationStart.Value * Mathf.Deg2Rad, Mathf.PI);
 
+            activate.Poll();
             if (toggleable.IsActive)
             {
-                if (activate.IsPressed)
+                if (activate.Pressed)
                 {
                     wasToggled = !wasToggled;
                     if (wasToggled) particleSys.Play();
                     else particleSys.Stop();
                 }
             }
-            else if (activate.IsPressed) particleSys.Play();
-            else if (activate.IsReleased) particleSys.Stop();
+            else if (activate.Pressed) particleSys.Play();
+            else if (activate.Released) particleSys.Stop();
         }
 
         // The startup frame: the whole mapper goes into the particle system at
@@ -579,6 +580,13 @@ namespace SpecialEffectsMod
             }
         }
 
+        // Besiege's own pass for emulated keys: once per emulation tick, from
+        // Machine.FixedUpdate, which is the only place their edges are true.
+        public override void KeyEmulationUpdate()
+        {
+            activate.ReadEmulation();
+        }
+
         // Besiege keeps the behaviour alive between runs, so without this a second
         // run starts with the startup work already marked done.
         public override void OnSimulateStart()
@@ -586,6 +594,7 @@ namespace SpecialEffectsMod
             hasStarted = false;
             startFrames = 0;
             wasToggled = false;
+            activate.Reset();
         }
     }
 }

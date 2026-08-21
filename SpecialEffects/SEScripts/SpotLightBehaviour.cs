@@ -44,7 +44,7 @@ namespace SpecialEffectsMod
 
         public Light sourceLight;
 
-        private MKey activate;
+        private KeyReader activate;
         private MMenu lightOptionsMenu;
         private MMenu lightTypes;
         private MMenu illuminationType;
@@ -186,7 +186,7 @@ namespace SpecialEffectsMod
             illuminationTypeDict.Add("Auto", LightRenderMode.Auto);
             illuminationType = AddMenu("IlluminationTypeKey", 0, illuminationTypeDict.Keys.ToList(), true);
 
-            activate = AddKey("Activate", "Activate", KeyCode.P);
+            activate = new KeyReader(AddKey("Activate", "Activate", KeyCode.P));
             range = AddSlider("Range", "Range", 30f, 0f, 1000f);
             toggleMode = AddToggle("Toggle", "ToggleKey", false);
             timeDependentEffects = AddToggle("TimeScale", "TimeDependentEffectsKey", true);
@@ -272,7 +272,7 @@ namespace SpecialEffectsMod
 
         private void ShowGeneralControls(bool state)
         {
-            Controls.Show(state, activate, lightTypes, range, toggleMode,
+            Controls.Show(state, activate.Mapper, lightTypes, range, toggleMode,
                 illuminationType, timeDependentEffects, textureMenu);
         }
 
@@ -395,10 +395,11 @@ namespace SpecialEffectsMod
 
             Animate(false);
 
-            if (activate.IsPressed) sourceLight.enabled = !sourceLight.isActiveAndEnabled;
+            activate.Poll();
+            if (activate.Pressed) sourceLight.enabled = !sourceLight.isActiveAndEnabled;
 
             // Hold-to-light: letting go puts it out, unless Toggle is on.
-            if (activate.Value == 0f && sourceLight.isActiveAndEnabled && !toggleMode.IsActive)
+            if (!activate.Held && sourceLight.isActiveAndEnabled && !toggleMode.IsActive)
                 sourceLight.enabled = false;
 
             UpdateLens();
@@ -644,11 +645,19 @@ namespace SpecialEffectsMod
 
         // Besiege keeps the behaviour alive between runs, so without this a second
         // run picks up mid-pattern with the startup work already marked done.
+        // Besiege's own pass for emulated keys: once per emulation tick, from
+        // Machine.FixedUpdate, which is the only place their edges are true.
+        public override void KeyEmulationUpdate()
+        {
+            activate.ReadEmulation();
+        }
+
         public override void OnSimulateStart()
         {
             hasStarted = false;
             startFrames = 0;
             previewing = false;
+            activate.Reset();
             shafts.enabled = false;
             sourceLight.enabled = false;
             ResetAnimation();

@@ -152,6 +152,9 @@ Writes a line of text in the world, using the fonts in the mod's asset bundle.
 | Setting | What it does |
 | --- | --- |
 | Font / Style | Typeface, and normal, bold, italic or both |
+| Activate | Key that shows or hides the text. Default `J` |
+| Toggle | On: press once to show, press again to hide. Off: hold the key |
+| Start Shown | Whether the text is there when the run starts |
 | Text | What it says |
 | Size | How big |
 | Color / Opacity | Colour of the text |
@@ -159,7 +162,14 @@ Writes a line of text in the world, using the fonts in the mod's asset bundle.
 | Collider | Off makes it decoration: no collisions, no mass |
 
 The block's own mesh hides itself once you start simulating, so only the text is
-left.
+left. Back in the build menu the text always shows, whatever the run left it as.
+
+## Variables
+
+Every **Activate** key here takes one of Besiege's variables in place of a key, the
+same way a base-game block does — set the key to a variable and whatever drives
+that variable drives the block. It works in both modes: a variable going true is a
+press, and staying true is a hold.
 
 ## Console commands
 

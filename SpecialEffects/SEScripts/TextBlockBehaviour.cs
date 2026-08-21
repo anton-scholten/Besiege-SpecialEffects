@@ -24,14 +24,18 @@ namespace SpecialEffectsMod
         private GameObject textObject;
         private DynamicText textComponent;
 
+        private KeyReader activate;
         private MText displayText;
         private MSlider textSize;
         private MSlider textOpacity;
         private MColourSlider textColor;
         private MSlider letterSpacing;
+        private MToggle toggleable;
+        private MToggle startShown;
         private MToggle collider;
 
         private bool hasStarted;
+        private bool shown = true;
         private int startFrames;
 
         public override void SafeAwake()
@@ -50,11 +54,14 @@ namespace SpecialEffectsMod
 
             CreateTextObject();
 
+            activate = new KeyReader(AddKey("Activate", "Activate", KeyCode.J));
             displayText = AddText("Text", "DisplayTextKey", "Besiege");
             textSize = AddSlider("Size", "DisplayTextSizeKey", 1f, 0f, 10f);
             textOpacity = AddSlider("Opacity", "DisplayTextOpacityKey", 0.75f, 0f, 1f);
             textColor = AddColourSlider("Color", "DisplayTextColor", Color.yellow, false);
             letterSpacing = AddSliderUnclamped("Letter Spacing", "DisplayTextLetterSpacing", 0f, -1f, 1f);
+            toggleable = AddToggle("Toggle", "ToggleKey", true);
+            startShown = AddToggle("Start Shown", "StartShownKey", true);
             collider = AddToggle("Collider", "DisplayTextCollider", true);
 
             fontMenu.ValueChanged += FontChanged;
@@ -130,6 +137,23 @@ namespace SpecialEffectsMod
             textComponent.font.material.SetColor("_TintColor", tint);
         }
 
+        // Toggle on: each press flips the text. Toggle off: the key inverts the
+        // starting state for as long as it is held.
+        public override void SimulateUpdateAlways()
+        {
+            activate.Poll();
+            if (toggleable.IsActive)
+            {
+                if (activate.Pressed) shown = !shown;
+            }
+            else
+            {
+                shown = activate.Held != startShown.IsActive;
+            }
+
+            if (textObject.activeSelf != shown) textObject.SetActive(shown);
+        }
+
         public override void SimulateUpdateHost()
         {
             if (hasStarted) return;
@@ -152,10 +176,26 @@ namespace SpecialEffectsMod
 
         // Besiege keeps the behaviour alive between runs, so this has to be armed
         // again or a second run never hides the mesh.
+        // Besiege's own pass for emulated keys: once per emulation tick, from
+        // Machine.FixedUpdate, which is the only place their edges are true.
+        public override void KeyEmulationUpdate()
+        {
+            activate.ReadEmulation();
+        }
+
         public override void OnSimulateStart()
         {
             hasStarted = false;
             startFrames = 0;
+            shown = startShown.IsActive;
+            activate.Reset();
+        }
+
+        // Whatever the run left it as, the build menu shows the text: there is
+        // nothing to read otherwise.
+        public override void OnSimulateStop()
+        {
+            textObject.SetActive(true);
         }
     }
 }

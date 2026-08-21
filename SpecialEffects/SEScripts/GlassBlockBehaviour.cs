@@ -16,7 +16,7 @@ namespace SpecialEffectsMod
         private MMenu shaderMenu;
         private MMenu shapeMenu;
 
-        private MKey activate;
+        private KeyReader activate;
         private MSlider transparency;
         private MColourSlider colorSlider;
         private MToggle toggleable;
@@ -62,7 +62,7 @@ namespace SpecialEffectsMod
             meshDict.Add("Torus", ModResource.GetMesh("GlassTorus_mesh"));
             shapeMenu = AddMenu("ShapeKey", 0, meshDict.Keys.ToList(), false);
 
-            activate = AddKey("Activate", "Activate", KeyCode.L);
+            activate = new KeyReader(AddKey("Activate", "Activate", KeyCode.L));
             transparency = AddSliderUnclamped("Transparency", "Transparency", 0.5f, 0f, 1f);
             colorSlider = AddColourSlider("Color", "ColorKey", Color.magenta, false);
             toggleable = AddToggle("Toggle", "ToggleKey", true);
@@ -113,8 +113,9 @@ namespace SpecialEffectsMod
             localTimePattern = timeDependentEffects.IsActive ? Time.timeScale : 1f;
             if (patternToggle.IsActive) StepPattern();
 
-            if (activate.IsPressed) ToggleVisibility();
-            HoldVisibility();
+            activate.Poll();
+            if (activate.Pressed) ToggleVisibility();
+            HoldVisibility(activate.Held);
 
             BlockMaterial.SetColor("_TintColor", currentColor);
             BlockMaterial.SetColor("_Color", currentColor);
@@ -206,13 +207,13 @@ namespace SpecialEffectsMod
 
         // Held-down mode reasserts the state every frame: letting go of the key is
         // what puts the pane back the way it started.
-        private void HoldVisibility()
+        private void HoldVisibility(bool held)
         {
             if (toggleable.IsActive)
             {
                 if (wasActive) VisualController.SetVisible();
             }
-            else if (!activate.IsDown)
+            else if (!held)
             {
                 SetVisible(startState.IsActive);
             }
@@ -230,11 +231,19 @@ namespace SpecialEffectsMod
 
         // Besiege keeps the behaviour alive between runs, so without this a second
         // run picks up mid-pattern with the startup work already marked done.
+        // Besiege's own pass for emulated keys: once per emulation tick, from
+        // Machine.FixedUpdate, which is the only place their edges are true.
+        public override void KeyEmulationUpdate()
+        {
+            activate.ReadEmulation();
+        }
+
         public override void OnSimulateStart()
         {
             hasStarted = false;
             wasActive = true;
             strobe.Reset();
+            activate.Reset();
         }
     }
 }

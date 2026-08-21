@@ -4,6 +4,21 @@
 
 **Added**
 
+- The **Text block** takes a key. **Activate** shows or hides the text, **Toggle**
+  picks press-to-flip or hold, and **Start Shown** decides which state a run
+  begins in. Existing machines start shown and stay shown, as before.
+- Every block's **Activate** key can be driven by one of Besiege's variables
+  instead of a keypress, in both hold and toggle modes.
+
+  The emulated state lives on `MKey` beside the keyboard state, but its edges are
+  only true inside Besiege's own `KeyEmulationUpdate` pass, which `Machine` runs
+  from `FixedUpdate` once per emulation tick. `MKey.CheckEmulation` compares
+  against a snapshot it advances the first time it is called in a fixed step, so
+  reading an edge from an ordinary `Update` reports the same press again on every
+  frame of that step — two or three presses for one, which cancels out any
+  Toggle. All four blocks now take their edges in `KeyEmulationUpdate` and hand
+  them to the frame update, which consumes each once.
+
 - **Light shafts** on both the Spot Light block and the Spot Light level editor
   object: visible beams through the air, shadowed by whatever stands in them.
   Ported from EEX-slime's *No Light No Life* (Workshop item 3374723392) and
@@ -129,6 +144,9 @@ with that version load and behave as they did, apart from the fixes.
 
 **Fixed**
 
+- The Glass block logged `IsDown is deprecated, please use IsHeld` every frame of
+  every run in which its Toggle was off. `MKey.IsDown` forwards to `IsHeld` after
+  writing that warning.
 - The entity's **Hide Visuals** event option did nothing. It hides the housing
   and leaves the beam now.
 - Four particle textures — Hex, Light1, Light2 and Fire — never loaded on Linux.
