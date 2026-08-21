@@ -1,7 +1,7 @@
 <Mod>	
 	<Name>SpecialEffects</Name>
 	<Author>wizz6rd</Author>
-	<Version>0.4.1</Version>
+	<Version>0.4.2</Version>
 	
 	<Description>
 	Adds SpotLight, Glass, ParticleEmitter and Text blocks, plus a Spot Light object for the level editor.
